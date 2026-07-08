@@ -15,6 +15,10 @@ create table if not exists public.users (
                    check (role in ('student', 'recruiter', 'admin')),
   oauth_provider text not null check (oauth_provider in ('google', 'github')),
   oauth_id       text not null,
+  -- Student's linked GitHub identity (FR 9/10) — set once the GitHub OAuth
+  -- connect flow succeeds; the access token itself lives in oauth_sessions.
+  github_username     text,
+  github_connected_at timestamptz,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
   -- One account per provider identity (supports existing-user detection, FR 6).

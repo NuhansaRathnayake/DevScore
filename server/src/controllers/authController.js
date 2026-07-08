@@ -51,9 +51,10 @@ export async function googleCallback(req, res, next) {
       expires: expiresAt,
     });
 
-    // Hand the token to the SPA callback route, which fetches /me and routes
-    // by role. Token is also set as an httpOnly cookie above.
-    res.redirect(`${env.clientUrl}/auth/callback#token=${token}`);
+    // The session lives only in the httpOnly cookie now (never in the URL or
+    // localStorage — see SDS §4.7.2). The SPA callback route calls /me, which
+    // authenticates via the cookie, then routes by role.
+    res.redirect(`${env.clientUrl}/auth/callback`);
   } catch (err) {
     next(err);
   }
