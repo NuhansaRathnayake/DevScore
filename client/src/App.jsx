@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Welcome from './pages/Welcome.jsx';
 import AuthCallback from './pages/AuthCallback.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
+import ConnectGithub from './pages/ConnectGithub.jsx';
 import RecruiterDashboard from './pages/RecruiterDashboard.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -22,6 +23,14 @@ export default function App() {
             element={
               <ProtectedRoute allow={['student']}>
                 <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/github"
+            element={
+              <ProtectedRoute allow={['student']}>
+                <ConnectGithub />
               </ProtectedRoute>
             }
           />

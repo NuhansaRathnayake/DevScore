@@ -62,3 +62,34 @@ export async function revokeSession(tokenId) {
     .eq('token_id', tokenId);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Find the user's most recent active session for a provider (e.g. the
+ * linked GitHub token, FR 9/10). Used to report connection status and to
+ * supply the encrypted access token to later GitHub API calls.
+ */
+export async function findActiveByUserAndProvider(userId, provider) {
+  const { data, error } = await supabase
+    .from('oauth_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('provider', provider)
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data && !isSessionActive(data)) return null;
+  return data;
+}
+
+/** Revoke every active session for a user under a given provider (reconnect/disconnect). */
+export async function revokeAllForUserProvider(userId, provider) {
+  const { error } = await supabase
+    .from('oauth_sessions')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('provider', provider)
+    .is('revoked_at', null);
+  if (error) throw new Error(error.message);
+}

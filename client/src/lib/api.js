@@ -1,22 +1,13 @@
 /**
- * Thin API client for the DevScore backend. Attaches the session token
- * (FR 7) and normalises error handling.
+ * Thin API client for the DevScore backend. The session travels only as an
+ * httpOnly cookie (SDS §4.7.2) — never store the session token in JS-readable
+ * storage. `credentials: 'include'` is what actually authenticates requests.
  */
-const TOKEN_KEY = 'devscore_token';
-
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (t) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-};
-
 async function request(path, options = {}) {
-  const token = tokenStore.get();
   const res = await fetch(`/api${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     credentials: 'include',
@@ -45,4 +36,13 @@ export const authApi = {
   },
   me: () => request('/auth/me'),
   logout: () => request('/auth/logout', { method: 'POST' }),
+};
+
+export const githubApi = {
+  /** Full-page redirect that begins the GitHub OAuth connect flow (FR 9/10). */
+  startConnect: () => {
+    window.location.href = '/api/auth/github/connect';
+  },
+  status: () => request('/auth/github/status'),
+  disconnect: () => request('/auth/github/disconnect', { method: 'POST' }),
 };
