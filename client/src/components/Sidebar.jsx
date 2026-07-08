@@ -14,7 +14,7 @@ const NAV_BY_ROLE = {
     links: [
       { to: '/student', label: 'Dashboard', end: true },
       { to: '/student/upload', label: 'Upload Resume', disabled: true },
-      { to: '/student/github', label: 'Connect GitHub', disabled: true },
+      { to: '/student/github', label: 'Connect GitHub' },
       { to: '/student/skills', label: 'Skills Status', disabled: true },
     ],
   },

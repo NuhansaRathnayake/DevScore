@@ -23,6 +23,8 @@ export function toPublicUser(row) {
     avatarUrl: row.avatar_url,
     role: row.role,
     createdAt: row.created_at,
+    githubUsername: row.github_username || null,
+    githubConnectedAt: row.github_connected_at || null,
   };
 }
 
@@ -45,6 +47,33 @@ export async function findById(id) {
     .select('*')
     .eq('id', id)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Record a student's linked GitHub identity (FR 9/10). */
+export async function setGithubProfile(userId, githubUsername) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      github_username: githubUsername,
+      github_connected_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Clear a student's linked GitHub identity (disconnect). */
+export async function clearGithubProfile(userId) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ github_username: null, github_connected_at: null })
+    .eq('id', userId)
+    .select()
+    .single();
   if (error) throw new Error(error.message);
   return data;
 }

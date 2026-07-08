@@ -234,6 +234,46 @@ a {
   background: var(--ds-bg);
 }
 
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--ds-bg);
+}
+
+.muted {
+  color: var(--ds-text-muted);
+  font-size: 13px;
+}
+
+.alert {
+  border-radius: var(--ds-radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.alert--error {
+  background: var(--ds-missing-bg);
+  color: var(--ds-missing);
+}
+
+.alert--success {
+  background: var(--ds-verified-bg);
+  color: var(--ds-verified);
+}
+
 /* ---- Auth screens ---- */
 .auth-screen {
   min-height: 100vh;
