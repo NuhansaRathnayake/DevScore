@@ -1,0 +1,43 @@
+/*
+ * DevScore design tokens — derived from the Team Script Fusion Figma
+ * (Student/Recruiter dashboards, auth screens). Keep values consistent with
+ * the Figma design system; components reference these variables only.
+ */
+:root {
+  /* Brand */
+  --ds-primary: #4f46e5;
+  --ds-primary-hover: #4338ca;
+  --ds-primary-soft: #eef2ff;
+  --ds-accent: #7c3aed;
+
+  /* Surfaces */
+  --ds-bg: #f8fafc;
+  --ds-surface: #ffffff;
+  --ds-sidebar: #0b1120;
+  --ds-sidebar-muted: #94a3b8;
+  --ds-sidebar-active: #1e293b;
+
+  /* Text */
+  --ds-text: #0f172a;
+  --ds-text-muted: #64748b;
+  --ds-text-subtle: #94a3b8;
+
+  /* Lines */
+  --ds-border: #e5e7eb;
+
+  /* Status (verification badges) */
+  --ds-verified: #16a34a;
+  --ds-verified-bg: #dcfce7;
+  --ds-pending: #b45309;
+  --ds-pending-bg: #fef3c7;
+  --ds-missing: #dc2626;
+  --ds-missing-bg: #fee2e2;
+
+  /* Shape & elevation */
+  --ds-radius: 12px;
+  --ds-radius-sm: 8px;
+  --ds-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
+
+  --ds-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+}
