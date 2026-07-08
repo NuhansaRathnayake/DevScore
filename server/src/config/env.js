@@ -2,10 +2,21 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+
+// Refuse to boot with the insecure default secret in production — falling
+// back silently there would sign session JWTs with a value published in
+// this source file.
+if (nodeEnv === 'production' && !process.env.JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET must be set in production (see server/.env.example).',
+  );
+}
+
 /** Centralised, validated access to environment configuration. */
 export const env = {
   port: Number(process.env.PORT) || 5000,
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -20,6 +31,13 @@ export const env = {
       process.env.GOOGLE_CALLBACK_URL ||
       'http://localhost:5000/api/auth/google/callback',
   },
+  github: {
+    clientId: process.env.GITHUB_CLIENT_ID || '',
+    clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+    callbackUrl:
+      process.env.GITHUB_CALLBACK_URL ||
+      'http://localhost:5000/api/auth/github/callback',
+  },
 };
 
 /** True only when Supabase credentials are present. */
@@ -30,4 +48,9 @@ export const isSupabaseConfigured = Boolean(
 /** True only when Google OAuth credentials are present. */
 export const isGoogleOAuthConfigured = Boolean(
   env.google.clientId && env.google.clientSecret,
+);
+
+/** True only when GitHub OAuth credentials are present (FR 9/10). */
+export const isGithubOAuthConfigured = Boolean(
+  env.github.clientId && env.github.clientSecret,
 );
