@@ -30,7 +30,7 @@ export default function AuthCallback() {
   if (error) {
     return (
       <div className="centered-status">
-        {error} <a href="/">Return to sign in</a>
+        {error} <a href="/login">Return to sign in</a>
       </div>
     );
   }

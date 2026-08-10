@@ -40,6 +40,17 @@ export async function findByProviderId(provider, oauthId) {
   return data;
 }
 
+/** Look up a user by email (local email/password login, and provider account detection). */
+export async function findByEmail(email) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Look up a user by primary key. */
 export async function findById(id) {
   const { data, error } = await supabase
@@ -78,26 +89,32 @@ export async function clearGithubProfile(userId) {
   return data;
 }
 
-/** Create a new user account (FR 5). Accepts camelCase input. */
+/**
+ * Create a new user account (FR 5). Accepts camelCase input. Either
+ * (oauthProvider + oauthId) or passwordHash must be supplied — enforced by
+ * the users_has_credential check constraint as well.
+ */
 export async function createUser({
   email,
   firstName = '',
   lastName = '',
   avatarUrl = '',
   role = ROLES.STUDENT,
-  oauthProvider,
-  oauthId,
+  oauthProvider = null,
+  oauthId = null,
+  passwordHash = null,
 }) {
   const { data, error } = await supabase
     .from('users')
     .insert({
-      email,
+      email: email.toLowerCase(),
       first_name: firstName,
       last_name: lastName,
       avatar_url: avatarUrl,
       role,
       oauth_provider: oauthProvider,
       oauth_id: oauthId,
+      password_hash: passwordHash,
     })
     .select()
     .single();
