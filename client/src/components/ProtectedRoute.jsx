@@ -14,7 +14,7 @@ export default function ProtectedRoute({ allow, children }) {
   }
 
   if (status === 'guest' || !user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (allow && !allow.includes(user.role)) {

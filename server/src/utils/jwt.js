@@ -52,3 +52,24 @@ export function verifyGithubConnectState(state) {
   }
   return payload.sub;
 }
+
+/**
+ * Short-lived state token for "Sign in / up with GitHub" (identity, not the
+ * student evidence-connect flow above). Reuses the same GitHub OAuth App and
+ * callback URL — the callback route tells the two flows apart by `purpose`,
+ * so no second callback URL needs to be registered with GitHub.
+ */
+export function signGithubLoginState() {
+  return jwt.sign({ purpose: 'github_login' }, env.jwtSecret, {
+    expiresIn: '10m',
+  });
+}
+
+/** Verify either GitHub state token, returning its decoded payload. */
+export function verifyGithubState(state) {
+  const payload = jwt.verify(state, env.jwtSecret);
+  if (!['github_connect', 'github_login'].includes(payload.purpose)) {
+    throw new Error('Invalid state token');
+  }
+  return payload;
+}
