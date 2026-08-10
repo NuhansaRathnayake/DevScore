@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import Welcome from './pages/Welcome.jsx';
+import Home from './pages/Home.jsx';
+import Login from './pages/Login.jsx';
 import AuthCallback from './pages/AuthCallback.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
 import ConnectGithub from './pages/ConnectGithub.jsx';
@@ -14,7 +15,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Welcome />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Role-based access control (FR 6) enforced per route */}

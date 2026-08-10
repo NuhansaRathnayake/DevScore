@@ -34,6 +34,16 @@ export const authApi = {
   startGoogleLogin: () => {
     window.location.href = '/api/auth/google';
   },
+  /** Full-page redirect that begins "Sign in / up with GitHub". */
+  startGithubLogin: () => {
+    window.location.href = '/api/auth/github/login';
+  },
+  /** Email/password registration. Resolves with the created user on success. */
+  register: (payload) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  /** Email/password login. Resolves with the user on success. */
+  login: (payload) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request('/auth/me'),
   logout: () => request('/auth/logout', { method: 'POST' }),
 };

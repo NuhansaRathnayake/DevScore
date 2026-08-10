@@ -2,9 +2,10 @@ import { Router } from 'express';
 import passport from 'passport';
 import { isGoogleOAuthConfigured, isGithubOAuthConfigured, env } from '../config/env.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { googleCallback, me, logout } from '../controllers/authController.js';
+import { googleCallback, register, login, me, logout } from '../controllers/authController.js';
 import {
   githubConnect,
+  githubLoginStart,
   githubCallback,
   githubStatus,
   githubDisconnect,
@@ -44,10 +45,18 @@ router.get(
   ensureGoogleConfigured,
   passport.authenticate('google', {
     session: false,
-    failureRedirect: `${env.clientUrl}/?error=oauth_failed`,
+    failureRedirect: `${env.clientUrl}/login?error=oauth_failed`,
   }),
   googleCallback,
 );
+
+// Email/password registration & login (alternative to OAuth sign-up).
+router.post('/register', register);
+router.post('/login', login);
+
+// "Sign in / up with GitHub" — identity only; distinct from the student
+// evidence-connect flow below, but shares its OAuth app and callback route.
+router.get('/github/login', ensureGithubConfigured, githubLoginStart);
 
 // FR 8 — current user (client uses this to route to the role dashboard).
 router.get('/me', requireAuth, me);

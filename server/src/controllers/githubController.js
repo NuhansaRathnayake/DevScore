@@ -1,7 +1,10 @@
 import { env } from '../config/env.js';
 import {
   signGithubConnectState,
-  verifyGithubConnectState,
+  signGithubLoginState,
+  verifyGithubState,
+  signSessionToken,
+  sessionExpiryDate,
   newTokenId,
 } from '../utils/jwt.js';
 import { encryptToken } from '../utils/secureToken.js';
@@ -11,7 +14,16 @@ import {
   revokeAllForUserProvider,
   revokeSession,
 } from '../models/OAuthSession.js';
-import { setGithubProfile, clearGithubProfile } from '../models/User.js';
+import {
+  setGithubProfile,
+  clearGithubProfile,
+  findByProviderId,
+  findByEmail,
+  createUser,
+  ROLES,
+} from '../models/User.js';
+
+const SESSION_COOKIE = 'devscore_session';
 
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -46,62 +58,82 @@ export function githubConnect(req, res) {
 }
 
 /**
- * GitHub OAuth callback (FR 9/10). Exchanges the authorization code for an
- * access token, fetches the GitHub username, encrypts and stores the token
- * (via the oauth_sessions audit table), and records the linked username on
- * the user profile.
+ * Begin "Sign in / up with GitHub" (identity, not the student evidence-link
+ * flow above). Reuses the same GitHub OAuth App/callback URL as connect —
+ * the callback tells the two apart via the signed `state`'s purpose.
  */
-export async function githubCallback(req, res) {
-  const { code, state, error: githubError } = req.query;
-  const redirectBack = (query) =>
-    res.redirect(`${env.clientUrl}/student/github?${new URLSearchParams(query)}`);
+export function githubLoginStart(req, res) {
+  const state = signGithubLoginState();
 
-  if (githubError) {
-    return redirectBack({ error: 'github_permission_denied' });
+  const params = new URLSearchParams({
+    client_id: env.github.clientId,
+    redirect_uri: env.github.callbackUrl,
+    scope: 'read:user user:email',
+    state,
+    allow_signup: 'true',
+  });
+
+  res.redirect(`${GITHUB_AUTHORIZE_URL}?${params.toString()}`);
+}
+
+/** Exchange an OAuth `code` for a GitHub access token + profile. Shared by connect and login. */
+async function exchangeGithubCode(code) {
+  const tokenRes = await fetch(GITHUB_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: env.github.clientId,
+      client_secret: env.github.clientSecret,
+      code,
+      redirect_uri: env.github.callbackUrl,
+    }),
+  });
+  const tokenBody = await tokenRes.json();
+  if (!tokenRes.ok || !tokenBody.access_token) {
+    throw new Error('github_token_exchange_failed');
   }
-  if (!code || !state) {
-    return redirectBack({ error: 'github_invalid_callback' });
+  const accessToken = tokenBody.access_token;
+
+  const profileRes = await fetch(GITHUB_USER_API, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'DevScore-App',
+    },
+  });
+  if (!profileRes.ok) {
+    throw new Error('github_profile_fetch_failed');
   }
+  const profile = await profileRes.json();
 
-  let userId;
-  try {
-    userId = verifyGithubConnectState(state);
-  } catch {
-    return redirectBack({ error: 'github_invalid_state' });
-  }
-
-  try {
-    const tokenRes = await fetch(GITHUB_TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: env.github.clientId,
-        client_secret: env.github.clientSecret,
-        code,
-        redirect_uri: env.github.callbackUrl,
-      }),
-    });
-    const tokenBody = await tokenRes.json();
-
-    if (!tokenRes.ok || !tokenBody.access_token) {
-      return redirectBack({ error: 'github_token_exchange_failed' });
-    }
-    const accessToken = tokenBody.access_token;
-
-    const profileRes = await fetch(GITHUB_USER_API, {
+  // Public profile email can be null — fall back to the (possibly private) primary email.
+  if (!profile.email) {
+    const emailsRes = await fetch(`${GITHUB_USER_API}/emails`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github+json',
         'User-Agent': 'DevScore-App',
       },
     });
-    if (!profileRes.ok) {
-      return redirectBack({ error: 'github_profile_fetch_failed' });
+    if (emailsRes.ok) {
+      const emails = await emailsRes.json();
+      profile.email = emails.find((e) => e.primary)?.email || emails[0]?.email || null;
     }
-    const profile = await profileRes.json();
+  }
+
+  return { accessToken, profile };
+}
+
+/** Continue the "connect GitHub for evidence" flow (existing student, FR 9/10). */
+async function completeGithubConnect(req, res, userId, code) {
+  const redirectBack = (query) =>
+    res.redirect(`${env.clientUrl}/student/github?${new URLSearchParams(query)}`);
+
+  try {
+    const { accessToken, profile } = await exchangeGithubCode(code);
 
     // One active GitHub connection per student — revoke any prior one before storing the new session.
     await revokeAllForUserProvider(userId, 'github');
@@ -126,6 +158,90 @@ export async function githubCallback(req, res) {
   } catch {
     return redirectBack({ error: 'github_connection_failed' });
   }
+}
+
+/** Continue "Sign in / up with GitHub" — find-or-create the account, then issue a session. */
+async function completeGithubLogin(req, res, code) {
+  const redirectBack = (query) =>
+    res.redirect(`${env.clientUrl}/login?${new URLSearchParams(query)}`);
+
+  try {
+    const { profile } = await exchangeGithubCode(code);
+    const oauthId = String(profile.id);
+
+    let user = await findByProviderId('github', oauthId);
+    if (!user) {
+      // A prior Google/local account with the same email gets linked by
+      // email rather than duplicated (mirrors Google's existing-user check, FR 4/6).
+      user = profile.email ? await findByEmail(profile.email) : null;
+      if (!user) {
+        if (!profile.email) {
+          return redirectBack({ error: 'github_email_required' });
+        }
+        const [firstName, ...rest] = (profile.name || profile.login || '').split(' ');
+        user = await createUser({
+          email: profile.email,
+          firstName: firstName || profile.login || 'GitHub',
+          lastName: rest.join(' '),
+          avatarUrl: profile.avatar_url || '',
+          role: ROLES.STUDENT,
+          oauthProvider: 'github',
+          oauthId,
+        });
+      }
+    }
+
+    const tokenId = newTokenId();
+    const expiresAt = sessionExpiryDate();
+    await createSession({
+      userId: user.id,
+      provider: 'github',
+      tokenId,
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip,
+      expiresAt,
+    });
+    const token = signSessionToken({ userId: user.id, role: user.role, tokenId });
+
+    res.cookie(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: env.nodeEnv === 'production',
+      sameSite: 'lax',
+      expires: expiresAt,
+    });
+
+    return res.redirect(`${env.clientUrl}/auth/callback`);
+  } catch {
+    return redirectBack({ error: 'github_login_failed' });
+  }
+}
+
+/**
+ * Shared GitHub OAuth callback — dispatches to the "connect for evidence"
+ * flow (FR 9/10) or the "sign in / up with GitHub" flow based on the signed
+ * state's purpose, since both reuse the same registered callback URL.
+ */
+export async function githubCallback(req, res) {
+  const { code, state, error: githubError } = req.query;
+
+  if (githubError) {
+    return res.redirect(`${env.clientUrl}/login?error=github_permission_denied`);
+  }
+  if (!code || !state) {
+    return res.redirect(`${env.clientUrl}/login?error=github_invalid_callback`);
+  }
+
+  let payload;
+  try {
+    payload = verifyGithubState(state);
+  } catch {
+    return res.redirect(`${env.clientUrl}/login?error=github_invalid_state`);
+  }
+
+  if (payload.purpose === 'github_connect') {
+    return completeGithubConnect(req, res, payload.sub, code);
+  }
+  return completeGithubLogin(req, res, code);
 }
 
 /** Report whether the current student has an active GitHub connection. */
