@@ -1,43 +1,75 @@
 /*
- * DevScore design tokens — derived from the Team Script Fusion Figma
- * (Student/Recruiter dashboards, auth screens). Keep values consistent with
- * the Figma design system; components reference these variables only.
+ * DevScore design tokens — teal editorial system.
+ * Values are kept in lockstep with the marketing layer (pages/Home.css) so the
+ * app and the landing page read as one product. Components reference these
+ * variables only; Home.css intentionally hard-codes the same hexes.
  */
 :root {
   /* Brand */
-  --ds-primary: #4f46e5;
-  --ds-primary-hover: #4338ca;
-  --ds-primary-soft: #eef2ff;
-  --ds-accent: #7c3aed;
+  --ds-primary: #0d9488;
+  --ds-primary-hover: #0f766e;
+  --ds-primary-soft: #f0fdfa;
+  --ds-primary-border: #ccfbf1;
+  --ds-primary-bright: #2dd4bf;
+  --ds-accent: #2dd4bf;
 
   /* Surfaces */
-  --ds-bg: #f8fafc;
+  --ds-bg: #fafafa;
   --ds-surface: #ffffff;
-  --ds-sidebar: #0b1120;
-  --ds-sidebar-muted: #94a3b8;
-  --ds-sidebar-active: #1e293b;
+
+  /* Dark surfaces (sidebar) */
+  --ds-sidebar: #0a0a0a;
+  --ds-sidebar-text: #e5e5e5;
+  --ds-sidebar-muted: #a3a3a3;
+  --ds-sidebar-active: #171717;
+  --ds-sidebar-accent: #2dd4bf;
+  --ds-sidebar-border: #262626;
 
   /* Text */
-  --ds-text: #0f172a;
-  --ds-text-muted: #64748b;
-  --ds-text-subtle: #94a3b8;
+  --ds-heading: #0a0a0a;
+  --ds-text: #171717;
+  --ds-text-muted: #525252;
+  --ds-text-subtle: #737373;
+  --ds-text-faint: #a3a3a3;
 
   /* Lines */
-  --ds-border: #e5e7eb;
+  --ds-border: #ececec;
+  --ds-border-soft: #f0f0f0;
+  --ds-border-strong: #e5e5e5;
 
   /* Status (verification badges) */
   --ds-verified: #16a34a;
   --ds-verified-bg: #dcfce7;
+  --ds-verified-border: #bbf7d0;
   --ds-pending: #b45309;
   --ds-pending-bg: #fef3c7;
+  --ds-pending-border: #fde68a;
   --ds-missing: #dc2626;
   --ds-missing-bg: #fee2e2;
+  --ds-missing-border: #fecaca;
 
-  /* Shape & elevation */
-  --ds-radius: 12px;
-  --ds-radius-sm: 8px;
-  --ds-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
+  /* Shape */
+  --ds-radius-xs: 8px;
+  --ds-radius-sm: 10px;
+  --ds-radius: 16px;
+  --ds-radius-lg: 18px;
+  --ds-radius-pill: 999px;
 
+  /* Elevation */
+  --ds-shadow: 0 1px 2px rgba(10, 10, 10, 0.04);
+  --ds-shadow-hover: 0 8px 20px rgba(10, 10, 10, 0.06);
+  --ds-shadow-lg: 0 24px 60px -20px rgba(10, 10, 10, 0.18),
+    0 4px 12px rgba(10, 10, 10, 0.05);
+  --ds-shadow-primary: 0 1px 2px rgba(13, 148, 136, 0.35);
+  --ds-shadow-primary-hover: 0 2px 8px rgba(13, 148, 136, 0.28);
+  --ds-focus-ring: 0 0 0 3px rgba(13, 148, 136, 0.16);
+
+  /* Type — Space Grotesk is loaded at 500/600/700 only */
   --ds-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
+  --ds-font-display: 'Space Grotesk', 'Inter', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ds-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --ds-transition: 0.15s ease;
 }

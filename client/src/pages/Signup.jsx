@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo.jsx';
+import AuthAside from '../components/AuthAside.jsx';
 import { AuthProviderButtons } from '../components/ProviderIcons.jsx';
 import { authApi } from '../lib/api.js';
 import { authErrorMessage } from '../lib/authErrors.js';
@@ -75,102 +76,106 @@ export default function Signup() {
 
   return (
     <div className="auth-screen">
-      <div className="auth-shell">
-        <Link to="/" className="auth-back">
-          &larr; Back to home
-        </Link>
-        <div className="auth-card card">
-          <span className="brand">
-            <Logo showText subtitle="AI Job Readiness Scoring" />
-          </span>
+      <div className="auth-layout">
+        <section className="auth-panel">
+          <div className="auth-panel__inner">
+            <Link to="/" className="auth-back">
+              &larr; Back to home
+            </Link>
+            <span className="brand">
+              <Logo showText subtitle="AI Job Readiness Scoring" />
+            </span>
 
-          <h1>Create your DevScore account</h1>
-          <p>
-            Verify your software engineering skills with evidence from your
-            resume and GitHub activity.
-          </p>
+            <h1>Create your DevScore account</h1>
+            <p className="auth-lead">
+              Verify your software engineering skills with evidence from your
+              resume and GitHub activity.
+            </p>
 
-          {bannerError && <div className="auth-error">{bannerError}</div>}
+            {bannerError && <div className="auth-error">{bannerError}</div>}
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="auth-form__row">
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <div className="auth-form__row">
+                <label className="auth-field">
+                  <span>First name</span>
+                  <input
+                    type="text"
+                    value={form.firstName}
+                    onChange={updateField('firstName')}
+                    autoComplete="given-name"
+                    required
+                  />
+                </label>
+                <label className="auth-field">
+                  <span>Last name</span>
+                  <input
+                    type="text"
+                    value={form.lastName}
+                    onChange={updateField('lastName')}
+                    autoComplete="family-name"
+                  />
+                </label>
+              </div>
+
               <label className="auth-field">
-                <span>First name</span>
+                <span>Email</span>
                 <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={updateField('firstName')}
-                  autoComplete="given-name"
+                  type="email"
+                  value={form.email}
+                  onChange={updateField('email')}
+                  autoComplete="email"
                   required
                 />
               </label>
+
               <label className="auth-field">
-                <span>Last name</span>
+                <span>Password</span>
                 <input
-                  type="text"
-                  value={form.lastName}
-                  onChange={updateField('lastName')}
-                  autoComplete="family-name"
+                  type="password"
+                  value={form.password}
+                  onChange={updateField('password')}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
                 />
               </label>
+
+              <label className="auth-field">
+                <span>Confirm password</span>
+                <input
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={updateField('confirmPassword')}
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
+
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'Please wait…' : 'Create account'}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <span>or continue with</span>
             </div>
 
-            <label className="auth-field">
-              <span>Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={updateField('email')}
-                autoComplete="email"
-                required
-              />
-            </label>
+            <AuthProviderButtons
+              onGoogle={authApi.startGoogleLogin}
+              onGithub={authApi.startGithubLogin}
+            />
 
-            <label className="auth-field">
-              <span>Password</span>
-              <input
-                type="password"
-                value={form.password}
-                onChange={updateField('password')}
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
-            </label>
+            <p className="auth-switch">
+              Already have an account? <Link to="/login">Sign in</Link>
+            </p>
 
-            <label className="auth-field">
-              <span>Confirm password</span>
-              <input
-                type="password"
-                value={form.confirmPassword}
-                onChange={updateField('confirmPassword')}
-                autoComplete="new-password"
-                required
-              />
-            </label>
-
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Please wait…' : 'Create account'}
-            </button>
-          </form>
-
-          <div className="auth-divider">
-            <span>or continue with</span>
+            <p className="auth-fineprint">
+              By continuing you agree to the Informed Consent and Privacy Policy.
+            </p>
           </div>
+        </section>
 
-          <AuthProviderButtons
-            onGoogle={authApi.startGoogleLogin}
-            onGithub={authApi.startGithubLogin}
-          />
-
-          <p className="auth-switch">
-            Already have an account? <Link to="/login">Sign in</Link>
-          </p>
-
-          <p className="auth-fineprint">
-            By continuing you agree to the Informed Consent and Privacy Policy.
-          </p>
-        </div>
+        <AuthAside variant="signup" />
       </div>
     </div>
   );

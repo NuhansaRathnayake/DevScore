@@ -1,6 +1,22 @@
 import { NavLink } from 'react-router-dom';
 import Logo from './Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import {
+  ResumeIcon,
+  GithubMiningIcon,
+  ScoreIcon,
+  EvidenceGapIcon,
+} from './FeatureIcons.jsx';
+import { CheckBadgeIcon, ClockIcon } from './DashboardIcons.jsx';
+
+function LogoutIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M15 17v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 12h11M18 9l3 3-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 /**
  * Role-aware navigation shell matching the Figma dashboard sidebar.
@@ -20,15 +36,15 @@ const NAV_BY_ROLE = {
   recruiter: {
     subtitle: 'Recruiter Portal',
     links: [
-      { to: '/recruiter', label: 'Dashboard', end: true },
-      { to: '/recruiter/scores', label: 'Scores', disabled: true },
+      { to: '/recruiter', label: 'Dashboard', end: true, Icon: EvidenceGapIcon },
+      { to: '/recruiter/scores', label: 'Scores', disabled: true, Icon: ScoreIcon },
     ],
   },
   admin: {
     subtitle: 'Admin Portal',
     links: [
-      { to: '/admin', label: 'Dashboard', end: true },
-      { to: '/admin/audit-log', label: 'Audit Log', disabled: true },
+      { to: '/admin', label: 'Dashboard', end: true, Icon: EvidenceGapIcon },
+      { to: '/admin/audit-log', label: 'Audit Log', disabled: true, Icon: ClockIcon },
     ],
   },
 };
@@ -50,6 +66,7 @@ export default function Sidebar() {
               style={{ opacity: 0.5, cursor: 'not-allowed' }}
               title="Available in a later implementation phase"
             >
+              <link.Icon />
               <span>{link.label}</span>
             </span>
           ) : (
@@ -57,17 +74,26 @@ export default function Sidebar() {
               key={link.to}
               to={link.to}
               end={link.end}
+              title={link.label}
               className={({ isActive }) =>
                 `sidebar__link${isActive ? ' is-active' : ''}`
               }
             >
+              <link.Icon />
               <span>{link.label}</span>
             </NavLink>
           ),
         )}
       </nav>
 
-      <button type="button" className="sidebar__logout" onClick={logout}>
+      <button
+        type="button"
+        className="sidebar__logout"
+        onClick={logout}
+        title="Logout"
+        aria-label="Logout"
+      >
+        <LogoutIcon />
         <span>Logout</span>
       </button>
     </aside>

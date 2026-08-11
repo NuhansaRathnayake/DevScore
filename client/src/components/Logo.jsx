@@ -1,6 +1,6 @@
 /**
- * DevScore brand mark — the hexagonal glyph + wordmark used in the Figma
- * sidebar and auth screens.
+ * DevScore brand mark — the rounded-square checkmark tile + wordmark, matching
+ * the marketing site. The fill tracks --ds-primary so a retheme stays one line.
  */
 export default function Logo({ size = 28, showText = true, subtitle }) {
   return (
@@ -12,15 +12,14 @@ export default function Logo({ size = 28, showText = true, subtitle }) {
         fill="none"
         aria-hidden="true"
       >
+        <rect x="2" y="2" width="28" height="28" rx="8" fill="var(--ds-primary)" />
         <path
-          d="M16 2 28 9v14L16 30 4 23V9L16 2Z"
-          fill="var(--ds-primary)"
-        />
-        <path
-          d="M16 9v14M11 12l10 8M21 12l-10 8"
+          d="M10 16.5l4 4 8-9"
           stroke="#fff"
-          strokeWidth="1.6"
+          strokeWidth="2.6"
           strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
         />
       </svg>
       {showText && (
