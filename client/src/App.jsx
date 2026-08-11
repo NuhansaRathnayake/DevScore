@@ -3,10 +3,13 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
+import Signup from './pages/Signup.jsx';
 import AuthCallback from './pages/AuthCallback.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
 import ConnectGithub from './pages/ConnectGithub.jsx';
+import UploadResume from './pages/UploadResume.jsx';
 import RecruiterDashboard from './pages/RecruiterDashboard.jsx';
+import CandidateProfile from './pages/CandidateProfile.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import NotFound from './pages/NotFound.jsx';
 
@@ -17,6 +20,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Role-based access control (FR 6) enforced per route */}
@@ -37,10 +41,26 @@ export default function App() {
             }
           />
           <Route
+            path="/student/resume"
+            element={
+              <ProtectedRoute allow={['student']}>
+                <UploadResume />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/recruiter"
             element={
               <ProtectedRoute allow={['recruiter']}>
                 <RecruiterDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recruiter/candidates/:id"
+            element={
+              <ProtectedRoute allow={['recruiter']}>
+                <CandidateProfile />
               </ProtectedRoute>
             }
           />
