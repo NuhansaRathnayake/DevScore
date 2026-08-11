@@ -14,7 +14,7 @@ const NAV_BY_ROLE = {
       { to: '/student', label: 'Dashboard', end: true },
       { to: '/student/resume', label: 'Upload Resume' },
       { to: '/student/github', label: 'Connect GitHub' },
-      { to: '/student/skills', label: 'Skills Status', disabled: true },
+      { to: '/student/skills', label: 'Skills Status' },
     ],
   },
   recruiter: {

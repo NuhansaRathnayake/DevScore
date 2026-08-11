@@ -8,6 +8,7 @@ import AuthCallback from './pages/AuthCallback.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
 import ConnectGithub from './pages/ConnectGithub.jsx';
 import UploadResume from './pages/UploadResume.jsx';
+import SkillsStatus from './pages/SkillsStatus.jsx';
 import RecruiterDashboard from './pages/RecruiterDashboard.jsx';
 import CandidateProfile from './pages/CandidateProfile.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
@@ -45,6 +46,14 @@ export default function App() {
             element={
               <ProtectedRoute allow={['student']}>
                 <UploadResume />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/skills"
+            element={
+              <ProtectedRoute allow={['student']}>
+                <SkillsStatus />
               </ProtectedRoute>
             }
           />

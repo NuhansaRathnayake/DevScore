@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout.jsx';
-import SkillChips from '../components/SkillChips.jsx';
 import { resumeApi } from '../lib/api.js';
 
 function formatSize(bytes) {
@@ -9,9 +9,9 @@ function formatSize(bytes) {
 }
 
 /**
- * Upload Resume screen (FR 19-32). Accepts a PDF, stores it, triggers skill
- * extraction, and displays both the upload state and the extracted skills.
- * Re-uploading replaces the resume and re-parses it.
+ * Upload Resume screen (FR 19-27). Accepts a PDF, stores it, and triggers
+ * skill extraction (re-uploading replaces + re-parses). The extracted
+ * skills themselves are shown on their own Skills Status page, not here.
  */
 export default function UploadResume() {
   const [status, setStatus] = useState(null);
@@ -68,7 +68,7 @@ export default function UploadResume() {
         </div>
       )}
 
-      <div className="card" style={{ maxWidth: 480, marginBottom: 20 }}>
+      <div className="card" style={{ maxWidth: 480 }}>
         {loading ? (
           <p>Checking resume status…</p>
         ) : status?.uploaded ? (
@@ -114,18 +114,10 @@ export default function UploadResume() {
       </div>
 
       {status?.uploaded && (
-        <div className="card" style={{ maxWidth: 640 }}>
-          <h3 style={{ marginTop: 0 }}>Extracted Skills</h3>
-          <p className="muted" style={{ marginTop: -8, marginBottom: 16 }}>
-            This is what we found in your resume — recruiters see the same
-            list, alongside how much of it your GitHub activity backs up.
-          </p>
-          <SkillChips
-            status={status.skills?.status}
-            byCategory={status.skills?.byCategory}
-            uncategorized={status.skills?.uncategorized}
-          />
-        </div>
+        <p className="muted" style={{ marginTop: 16 }}>
+          We extract skills from your resume automatically — check{' '}
+          <Link to="/student/skills">Skills Status</Link> to see what was found.
+        </p>
       )}
     </DashboardLayout>
   );
