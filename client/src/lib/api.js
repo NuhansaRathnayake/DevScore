@@ -56,3 +56,55 @@ export const githubApi = {
   status: () => request('/auth/github/status'),
   disconnect: () => request('/auth/github/disconnect', { method: 'POST' }),
 };
+
+export const resumeApi = {
+  status: () => request('/resume/status'),
+  /**
+   * Upload/replace the resume (FR 19-27). Uses a bare fetch — multipart
+   * bodies must not get the `Content-Type: application/json` header the
+   * shared `request()` helper always sets.
+   */
+  upload: async (file) => {
+    const body = new FormData();
+    body.append('resume', file);
+    const res = await fetch('/api/resume/upload', {
+      method: 'POST',
+      body,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        message = (await res.json()).error || message;
+      } catch {
+        /* non-JSON error */
+      }
+      throw new Error(message);
+    }
+    return res.json();
+  },
+};
+
+export const adminApi = {
+  stats: () => request('/admin/stats'),
+  listRecruiters: () => request('/admin/recruiters'),
+  /** Creates a recruiter account; resolves with { recruiter, tempPassword } (password shown once). */
+  createRecruiter: (payload) =>
+    request('/admin/recruiters', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteRecruiter: (id) => request(`/admin/recruiters/${id}`, { method: 'DELETE' }),
+  /**
+   * Set or reset a recruiter's password. Pass `{ password }` to choose it,
+   * or omit it to have the server generate a random one-time password.
+   * Resolves with { recruiter, tempPassword } (password shown once).
+   */
+  setRecruiterPassword: (id, payload = {}) =>
+    request(`/admin/recruiters/${id}/password`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};
+
+export const recruiterApi = {
+  listCandidates: () => request('/recruiter/candidates'),
+  getCandidate: (id) => request(`/recruiter/candidates/${id}`),
+};
