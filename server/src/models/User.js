@@ -25,6 +25,9 @@ export function toPublicUser(row) {
     createdAt: row.created_at,
     githubUsername: row.github_username || null,
     githubConnectedAt: row.github_connected_at || null,
+    resumeFilename: row.resume_original_name || null,
+    resumeSizeBytes: row.resume_size_bytes || null,
+    resumeUploadedAt: row.resume_uploaded_at || null,
   };
 }
 
@@ -87,6 +90,79 @@ export async function clearGithubProfile(userId) {
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Record a student's uploaded resume (FR 19-27). Re-uploading overwrites these fields. */
+export async function setResumeInfo(userId, { originalName, storagePath, sizeBytes }) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      resume_original_name: originalName,
+      resume_storage_path: storagePath,
+      resume_size_bytes: sizeBytes,
+      resume_uploaded_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Clear a student's resume record (used if the storage upload fails after a prior success, or on delete). */
+export async function clearResumeInfo(userId) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      resume_original_name: null,
+      resume_storage_path: null,
+      resume_size_bytes: null,
+      resume_uploaded_at: null,
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Set (or replace) a user's password hash — admin create/reset flows. */
+export async function setPasswordHash(userId, passwordHash) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ password_hash: passwordHash })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** List all users of a given role, newest first (admin recruiter management; recruiter candidate list). */
+export async function listUsersByRole(role) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('role', role)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Count users of a given role without fetching rows (dashboard stats). */
+export async function countUsersByRole(role) {
+  const { count, error } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', role);
+  if (error) throw new Error(error.message);
+  return count || 0;
+}
+
+/** Delete a user account outright (admin CRUD, FR 47-50). Cascades to oauth_sessions. */
+export async function deleteUser(id) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 /**
