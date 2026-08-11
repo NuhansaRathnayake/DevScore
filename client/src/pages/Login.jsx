@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo.jsx';
+import AuthAside from '../components/AuthAside.jsx';
 import { AuthProviderButtons } from '../components/ProviderIcons.jsx';
 import { authApi } from '../lib/api.js';
 import { authErrorMessage } from '../lib/authErrors.js';
@@ -53,68 +54,72 @@ export default function Login() {
 
   return (
     <div className="auth-screen">
-      <div className="auth-shell">
-        <Link to="/" className="auth-back">
-          &larr; Back to home
-        </Link>
-        <div className="auth-card card">
-          <span className="brand">
-            <Logo showText subtitle="AI Job Readiness Scoring" />
-          </span>
+      <div className="auth-layout">
+        <section className="auth-panel">
+          <div className="auth-panel__inner">
+            <Link to="/" className="auth-back">
+              &larr; Back to home
+            </Link>
+            <span className="brand">
+              <Logo showText subtitle="AI Job Readiness Scoring" />
+            </span>
 
-          <h1>Sign in to DevScore</h1>
-          <p>
-            Verify your software engineering skills with evidence from your
-            resume and GitHub activity.
-          </p>
+            <h1>Sign in to DevScore</h1>
+            <p className="auth-lead">
+              Verify your software engineering skills with evidence from your
+              resume and GitHub activity.
+            </p>
 
-          {bannerError && <div className="auth-error">{bannerError}</div>}
+            {bannerError && <div className="auth-error">{bannerError}</div>}
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label className="auth-field">
-              <span>Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={updateField('email')}
-                autoComplete="email"
-                required
-              />
-            </label>
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <label className="auth-field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={updateField('email')}
+                  autoComplete="email"
+                  required
+                />
+              </label>
 
-            <label className="auth-field">
-              <span>Password</span>
-              <input
-                type="password"
-                value={form.password}
-                onChange={updateField('password')}
-                autoComplete="current-password"
-                required
-              />
-            </label>
+              <label className="auth-field">
+                <span>Password</span>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={updateField('password')}
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
 
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Please wait…' : 'Sign in'}
-            </button>
-          </form>
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'Please wait…' : 'Sign in'}
+              </button>
+            </form>
 
-          <div className="auth-divider">
-            <span>or continue with</span>
+            <div className="auth-divider">
+              <span>or continue with</span>
+            </div>
+
+            <AuthProviderButtons
+              onGoogle={authApi.startGoogleLogin}
+              onGithub={authApi.startGithubLogin}
+            />
+
+            <p className="auth-switch">
+              Don&rsquo;t have an account? <Link to="/signup">Sign up</Link>
+            </p>
+
+            <p className="auth-fineprint">
+              By continuing you agree to the Informed Consent and Privacy Policy.
+            </p>
           </div>
+        </section>
 
-          <AuthProviderButtons
-            onGoogle={authApi.startGoogleLogin}
-            onGithub={authApi.startGithubLogin}
-          />
-
-          <p className="auth-switch">
-            Don&rsquo;t have an account? <Link to="/signup">Sign up</Link>
-          </p>
-
-          <p className="auth-fineprint">
-            By continuing you agree to the Informed Consent and Privacy Policy.
-          </p>
-        </div>
+        <AuthAside variant="login" />
       </div>
     </div>
   );

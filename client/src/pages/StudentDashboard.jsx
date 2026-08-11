@@ -14,7 +14,7 @@ function SetupCard({ Icon, done, title, description, doneLabel, actionLabel, to,
           <Icon />
         </span>
         <span className={`badge ${done ? 'badge--verified' : 'badge--pending'}`}>
-          {done ? '✓ Done' : 'Not started'}
+          {done ? 'Done' : 'Not started'}
         </span>
       </div>
       <h3>{title}</h3>
