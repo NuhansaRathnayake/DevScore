@@ -27,10 +27,10 @@ const NAV_BY_ROLE = {
   student: {
     subtitle: 'Candidate Portal',
     links: [
-      { to: '/student', label: 'Dashboard', end: true },
-      { to: '/student/resume', label: 'Upload Resume' },
-      { to: '/student/github', label: 'Connect GitHub' },
-      { to: '/student/skills', label: 'Skills Status' },
+      { to: '/student', label: 'Dashboard', end: true, Icon: EvidenceGapIcon },
+      { to: '/student/resume', label: 'Upload Resume', Icon: ResumeIcon },
+      { to: '/student/github', label: 'Connect GitHub', Icon: GithubMiningIcon },
+      { to: '/student/skills', label: 'Skills Status', Icon: CheckBadgeIcon },
     ],
   },
   recruiter: {
