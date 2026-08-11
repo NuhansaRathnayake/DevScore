@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, ROLE_HOME } from '../context/AuthContext.jsx';
+import { PageLoader } from '../components/Spinner.jsx';
 
 /**
  * OAuth callback landing (FR 8 / FR 18). The server has already set the
@@ -34,5 +35,9 @@ export default function AuthCallback() {
       </div>
     );
   }
-  return <div className="centered-status">Signing you in…</div>;
+  return (
+    <div className="centered-status">
+      <PageLoader label="Signing you in…" />
+    </div>
+  );
 }

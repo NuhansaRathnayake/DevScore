@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import recruiterRoutes from './routes/recruiterRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 /** Build the Express application (Application Logic Tier, SDS §2.1). */
@@ -23,6 +24,7 @@ export function createApp() {
   app.use('/api/resume', resumeRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/recruiter', recruiterRoutes);
+  app.use('/api/jobs', jobRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

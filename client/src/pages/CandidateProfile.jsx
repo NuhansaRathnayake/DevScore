@@ -4,6 +4,7 @@ import DashboardLayout from '../components/DashboardLayout.jsx';
 import SkillChips from '../components/SkillChips.jsx';
 import { recruiterApi } from '../lib/api.js';
 import { ResumeIcon, GithubMiningIcon } from '../components/FeatureIcons.jsx';
+import { InlineLoader } from '../components/Spinner.jsx';
 
 function initials(name) {
   return (name || '?')
@@ -45,7 +46,7 @@ export default function CandidateProfile() {
       </Link>
 
       {loading ? (
-        <p className="muted">Loading…</p>
+        <InlineLoader />
       ) : error ? (
         <div className="alert alert--error">{error}</div>
       ) : (
@@ -59,6 +60,25 @@ export default function CandidateProfile() {
               <p className="muted">{candidate.email}</p>
             </div>
           </div>
+
+          {candidate.appliedRoles?.length > 0 && (
+            <div className="card" style={{ marginTop: 20 }}>
+              <h3 style={{ marginTop: 0 }}>Applied For</h3>
+              <p className="muted" style={{ marginTop: -8, marginBottom: 16 }}>
+                Your postings this candidate applied to.
+              </p>
+              <ul className="applied-list" style={{ marginBottom: 0 }}>
+                {candidate.appliedRoles.map((r) => (
+                  <li className="applied-list__item" key={r.jobId}>
+                    <span className="applied-list__title">{r.jobTitle}</span>
+                    <span className="applied-list__meta">
+                      Applied {new Date(r.appliedAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="setup-grid" style={{ marginTop: 20 }}>
             <div className={`setup-card card ${candidate.resumeVerified ? 'is-done' : ''}`}>

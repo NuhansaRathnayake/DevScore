@@ -2,9 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout.jsx';
 import StatCard from '../components/StatCard.jsx';
+import { InlineLoader } from '../components/Spinner.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { recruiterApi } from '../lib/api.js';
-import { CandidatesIcon, CheckBadgeIcon, ClockIcon } from '../components/DashboardIcons.jsx';
+import {
+  BriefcaseIcon,
+  CandidatesIcon,
+  CheckBadgeIcon,
+} from '../components/DashboardIcons.jsx';
 
 function initials(name) {
   return (name || '?')
@@ -56,20 +61,28 @@ export default function RecruiterDashboard() {
   const firstName = user.firstName || 'there';
 
   const [candidates, setCandidates] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeJobId, setActiveJobId] = useState('all');
 
   useEffect(() => {
     (async () => {
       try {
-        const { candidates: rows, stats: s } = await recruiterApi.listCandidates();
+        const { candidates: rows, jobs: jobRows, stats: s } =
+          await recruiterApi.listCandidates();
         setCandidates(rows);
+        setJobs(jobRows);
         setStats(s);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  // Rows are per-application, so filtering by job is a plain client-side pass.
+  const visible =
+    activeJobId === 'all' ? candidates : candidates.filter((c) => c.jobId === activeJobId);
 
   return (
     <DashboardLayout>
@@ -81,22 +94,101 @@ export default function RecruiterDashboard() {
 
       {!loading && stats && (
         <div className="stat-grid">
+          <StatCard label="Open Roles" value={stats.openJobs} Icon={BriefcaseIcon} />
           <StatCard label="Total Candidates" value={stats.total} Icon={CandidatesIcon} />
           <StatCard label="Profiles Ready" value={stats.profileComplete} Icon={CheckBadgeIcon} />
-          <StatCard label="Awaiting Setup" value={stats.total - stats.profileComplete} Icon={ClockIcon} />
         </div>
       )}
 
-      <div className="card table-card">
+      <div className="card table-card" style={{ marginBottom: 20 }}>
         <div className="table-card__header">
-          <h3>Candidates</h3>
+          <h3>Your Job Postings</h3>
+          <Link to="/recruiter/jobs" className="btn-primary table-card__cta">
+            + Post a Job
+          </Link>
         </div>
 
         {loading ? (
-          <p className="muted table-card__empty">Loading…</p>
-        ) : candidates.length === 0 ? (
+          <InlineLoader className="table-card__empty" />
+        ) : jobs.length === 0 ? (
           <p className="muted table-card__empty">
-            No candidates have signed up yet.
+            You haven&rsquo;t posted any roles yet. Candidates apply to a specific role, so
+            post one to start receiving applicants.
+          </p>
+        ) : (
+          <>
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Applicants</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobs.slice(0, 5).map((j) => (
+                    <tr key={j.id}>
+                      <td>{j.title}</td>
+                      <td>
+                        <span
+                          className={`badge ${j.status === 'open' ? 'badge--verified' : 'badge--neutral'}`}
+                        >
+                          {j.status === 'open' ? 'Open' : 'Closed'}
+                        </span>
+                      </td>
+                      <td>{j.applicantCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted table-card__footer">
+              <Link to="/recruiter/jobs">Manage all postings</Link>
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="card table-card">
+        <div className="table-card__header">
+          <div>
+            <h3>Candidates</h3>
+            {jobs.length > 0 && (
+              <div className="job-filter">
+                <button
+                  type="button"
+                  className={`job-filter__chip ${activeJobId === 'all' ? 'is-active' : ''}`}
+                  onClick={() => setActiveJobId('all')}
+                >
+                  All ({candidates.length})
+                </button>
+                {jobs.map((j) => (
+                  <button
+                    type="button"
+                    key={j.id}
+                    className={`job-filter__chip ${activeJobId === j.id ? 'is-active' : ''}`}
+                    onClick={() => setActiveJobId(j.id)}
+                  >
+                    {j.title} ({j.applicantCount})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {loading ? (
+          <InlineLoader className="table-card__empty" />
+        ) : jobs.length === 0 ? (
+          <p className="muted table-card__empty">
+            Post a job role first — candidates reach you by applying to one.
+          </p>
+        ) : visible.length === 0 ? (
+          <p className="muted table-card__empty">
+            {activeJobId === 'all'
+              ? 'No one has applied to your roles yet.'
+              : 'No applications for this role yet.'}
           </p>
         ) : (
           <>
@@ -105,6 +197,7 @@ export default function RecruiterDashboard() {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Applied For</th>
                     <th>Email</th>
                     <th>Resume</th>
                     <th>GitHub</th>
@@ -113,14 +206,17 @@ export default function RecruiterDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {candidates.map((c) => (
-                    <tr key={c.id}>
+                  {/* keyed by application, not candidate — a student who applied
+                      to two of these roles legitimately appears twice */}
+                  {visible.map((c) => (
+                    <tr key={c.applicationId}>
                       <td>
                         <div className="data-table__person">
                           <span className="avatar avatar--sm">{initials(c.name)}</span>
                           {c.name}
                         </div>
                       </td>
+                      <td>{c.jobTitle}</td>
                       <td>{c.email}</td>
                       <td>
                         <StatusBadge verified={c.resumeVerified} />
@@ -142,7 +238,7 @@ export default function RecruiterDashboard() {
               </table>
             </div>
             <p className="muted table-card__footer">
-              Showing {candidates.length} candidate{candidates.length === 1 ? '' : 's'}
+              Showing {visible.length} application{visible.length === 1 ? '' : 's'}
             </p>
           </>
         )}

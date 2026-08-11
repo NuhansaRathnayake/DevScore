@@ -98,14 +98,25 @@
   transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 
-.home-btn--primary {
+/*
+ * Every home-btn is a <Link>/<a>, and `.home a { color: inherit }` (line 15)
+ * has higher specificity (class+element) than a single class like
+ * `.home-btn--primary` — so without the `a.` prefix these colors are
+ * silently overridden to the inherited dark body text. Pairing the element
+ * selector ties the specificity and lets source order (these rules come
+ * later) decide, which is what actually paints the intended color.
+ */
+.home-btn--primary,
+a.home-btn--primary {
   background: #0d9488;
   color: #fff;
   box-shadow: 0 2px 8px rgba(13, 148, 136, 0.28);
 }
 
-.home-btn--primary:hover {
+.home-btn--primary:hover,
+a.home-btn--primary:hover {
   background: #0f766e;
+  color: #fff;
 }
 
 .home-header .home-btn--primary,
@@ -114,25 +125,31 @@
   box-shadow: 0 1px 2px rgba(13, 148, 136, 0.35);
 }
 
-.home-btn--secondary {
+.home-btn--secondary,
+a.home-btn--secondary {
   background: #fff;
   border: 1px solid #e5e5e5;
   color: #171717;
 }
 
-.home-btn--secondary:hover {
+.home-btn--secondary:hover,
+a.home-btn--secondary:hover {
   background: #fafafa;
+  color: #171717;
 }
 
-.home-btn--white {
+.home-btn--white,
+a.home-btn--white {
   background: #fff;
   color: #0f766e;
   padding: 15px 30px;
   font-size: 16px;
 }
 
-.home-btn--white:hover {
+.home-btn--white:hover,
+a.home-btn--white:hover {
   background: #f0fdfa;
+  color: #0f766e;
 }
 
 .home-btn:active {

@@ -105,6 +105,33 @@ export const adminApi = {
 };
 
 export const recruiterApi = {
-  listCandidates: () => request('/recruiter/candidates'),
+  /**
+   * Applicants to the calling recruiter's postings — one row per application,
+   * so a student who applied to two roles appears twice. Resolves with
+   * { candidates, jobs, stats }. Pass a jobId to narrow to one posting.
+   */
+  listCandidates: (jobId) =>
+    request(
+      jobId
+        ? `/recruiter/candidates?jobId=${encodeURIComponent(jobId)}`
+        : '/recruiter/candidates',
+    ),
   getCandidate: (id) => request(`/recruiter/candidates/${id}`),
+};
+
+export const jobsApi = {
+  /** Open postings a student can apply to, plus any closed one they're already in. */
+  listOpen: () => request('/jobs'),
+  /** The calling recruiter's own postings, each with an applicantCount. */
+  listMine: () => request('/jobs/mine'),
+  /** The calling student's applications, each with the posting embedded. */
+  listApplied: () => request('/jobs/applied'),
+  create: (payload) => request('/jobs', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (id, payload) =>
+    request(`/jobs/${id}`, { method: 'POST', body: JSON.stringify(payload) }),
+  setStatus: (id, status) =>
+    request(`/jobs/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  remove: (id) => request(`/jobs/${id}`, { method: 'DELETE' }),
+  apply: (id) => request(`/jobs/${id}/apply`, { method: 'POST' }),
+  withdraw: (id) => request(`/jobs/${id}/apply`, { method: 'DELETE' }),
 };

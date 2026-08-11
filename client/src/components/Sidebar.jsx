@@ -7,7 +7,7 @@ import {
   ScoreIcon,
   EvidenceGapIcon,
 } from './FeatureIcons.jsx';
-import { CheckBadgeIcon, ClockIcon } from './DashboardIcons.jsx';
+import { BriefcaseIcon, CheckBadgeIcon, ClockIcon } from './DashboardIcons.jsx';
 
 function LogoutIcon() {
   return (
@@ -28,6 +28,7 @@ const NAV_BY_ROLE = {
     subtitle: 'Candidate Portal',
     links: [
       { to: '/student', label: 'Dashboard', end: true, Icon: EvidenceGapIcon },
+      { to: '/student/jobs', label: 'Job Roles', Icon: BriefcaseIcon },
       { to: '/student/resume', label: 'Upload Resume', Icon: ResumeIcon },
       { to: '/student/github', label: 'Connect GitHub', Icon: GithubMiningIcon },
       { to: '/student/skills', label: 'Skills Status', Icon: CheckBadgeIcon },
@@ -37,6 +38,7 @@ const NAV_BY_ROLE = {
     subtitle: 'Recruiter Portal',
     links: [
       { to: '/recruiter', label: 'Dashboard', end: true, Icon: EvidenceGapIcon },
+      { to: '/recruiter/jobs', label: 'Job Postings', Icon: BriefcaseIcon },
       { to: '/recruiter/scores', label: 'Scores', disabled: true, Icon: ScoreIcon },
     ],
   },

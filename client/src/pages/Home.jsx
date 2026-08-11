@@ -1,4 +1,7 @@
+import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuth, ROLE_HOME } from '../context/AuthContext.jsx';
 import {
   ResumeIcon,
@@ -7,6 +10,8 @@ import {
   EvidenceGapIcon,
 } from '../components/FeatureIcons.jsx';
 import './Home.css';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const SKILL_STATUS = {
   verified: { label: 'Verified', fg: '#16a34a', bg: '#dcfce7' },
@@ -122,8 +127,133 @@ export default function Home() {
   const primaryHref = isAuthed ? dashboardHref : '/signup';
   const primaryLabel = isAuthed ? 'Go to Dashboard' : 'Get your score — free';
 
+  const rootRef = useRef(null);
+  const scoreValueRef = useRef(null);
+  const scoreRingRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return undefined;
+
+    const ctx = gsap.context(() => {
+      // Hero — staggered reveal, above the fold so it runs immediately rather
+      // than on a scroll trigger.
+      gsap
+        .timeline({ defaults: { ease: 'power3.out', duration: 0.7 } })
+        .from('.home-hero__badge', { opacity: 0, y: 16 })
+        .from('.home-hero h1', { opacity: 0, y: 22 }, '-=0.5')
+        .from('.home-hero__lead', { opacity: 0, y: 18 }, '-=0.5')
+        .from('.home-hero__actions .home-btn', { opacity: 0, y: 14, stagger: 0.1 }, '-=0.45')
+        .from('.home-hero__trust span', { opacity: 0, y: 10, stagger: 0.08 }, '-=0.35')
+        .from('.home-hero__visual', { opacity: 0, x: 32, duration: 0.8 }, '-=0.6');
+
+      // Readiness-score number and ring fill count up together once the hero
+      // has mostly settled.
+      if (scoreValueRef.current) {
+        scoreValueRef.current.textContent = '0';
+        if (scoreRingRef.current) {
+          scoreRingRef.current.style.background = 'conic-gradient(#0d9488 0 0%, #eeeeee 0% 100%)';
+        }
+        const counter = { value: 0 };
+        gsap.to(counter, {
+          value: 82,
+          duration: 1.1,
+          delay: 0.9,
+          ease: 'power1.out',
+          onUpdate: () => {
+            const pct = Math.round(counter.value);
+            if (scoreValueRef.current) scoreValueRef.current.textContent = pct;
+            if (scoreRingRef.current) {
+              scoreRingRef.current.style.background =
+                `conic-gradient(#0d9488 0 ${pct}%, #eeeeee ${pct}% 100%)`;
+            }
+          },
+        });
+      }
+
+      // Everything below the fold fades up as it's scrolled into view.
+      gsap.from('.home-trust__label, .home-trust__items span', {
+        opacity: 0,
+        y: 10,
+        stagger: 0.05,
+        scrollTrigger: { trigger: '.home-trust', start: 'top 85%' },
+      });
+
+      gsap.from('.home-feature-card', {
+        opacity: 0,
+        y: 26,
+        stagger: 0.12,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.home-features', start: 'top 82%' },
+      });
+
+      gsap.utils.toArray('.home-section__intro, .home-how__intro, .home-report__eyebrow').forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 20,
+          duration: 0.6,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: el, start: 'top 85%' },
+        });
+      });
+
+      gsap.from('.home-step', {
+        opacity: 0,
+        y: 24,
+        stagger: 0.12,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.home-steps', start: 'top 80%' },
+      });
+
+      gsap.from('.home-report__point', {
+        opacity: 0,
+        x: -16,
+        stagger: 0.1,
+        duration: 0.5,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.home-report__points', start: 'top 85%' },
+      });
+
+      gsap.from('.evidence-card', {
+        opacity: 0,
+        y: 24,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.evidence-card', start: 'top 85%' },
+      });
+
+      // Evidence bars fill from 0 to their real width on scroll, reusing the
+      // width React already set inline as the animation's target.
+      gsap.utils.toArray('.evidence-bar__fill').forEach((bar) => {
+        const target = bar.style.width;
+        gsap.fromTo(
+          bar,
+          { width: '0%' },
+          {
+            width: target,
+            duration: 0.9,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: bar, start: 'top 90%' },
+          },
+        );
+      });
+
+      gsap.from('.home-cta__box', {
+        opacity: 0,
+        scale: 0.96,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.home-cta__box', start: 'top 85%' },
+      });
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="home">
+    <div className="home" ref={rootRef}>
       <header className="home-header">
         <span className="home-brand">
           <BrandMark />
@@ -190,9 +320,13 @@ export default function Home() {
                 <span className="report-card__pill">Readiness</span>
               </div>
               <div className="report-card__score-row">
-                <div className="report-card__ring" style={{ background: 'conic-gradient(#0d9488 0 82%, #eeeeee 82% 100%)' }}>
+                <div
+                  className="report-card__ring"
+                  ref={scoreRingRef}
+                  style={{ background: 'conic-gradient(#0d9488 0 82%, #eeeeee 82% 100%)' }}
+                >
                   <div className="report-card__ring-inner">
-                    <span className="report-card__score-value">82</span>
+                    <span className="report-card__score-value" ref={scoreValueRef}>82</span>
                   </div>
                 </div>
                 <div>

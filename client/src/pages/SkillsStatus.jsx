@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout.jsx';
 import SkillChips from '../components/SkillChips.jsx';
+import { InlineLoader } from '../components/Spinner.jsx';
 import { resumeApi } from '../lib/api.js';
 
 const STATUS_LABEL = {
@@ -42,7 +43,7 @@ export default function SkillsStatus() {
       </p>
 
       {loading ? (
-        <p className="muted">Loading…</p>
+        <InlineLoader />
       ) : !status?.uploaded ? (
         <div className="card" style={{ maxWidth: 480 }}>
           <p className="muted">

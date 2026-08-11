@@ -1,6 +1,7 @@
 import { supabase } from '../config/db.js';
 import { setResumeInfo, setSkillsExtraction } from '../models/User.js';
 import { parseResumeBuffer } from '../utils/cvParser.js';
+import { hasAnyApplication } from '../models/JobApplication.js';
 
 const BUCKET = 'resumes';
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB (FR 20 — size validation)
@@ -37,6 +38,18 @@ export async function uploadResume(req, res, next) {
     }
     if (file.size > MAX_SIZE_BYTES) {
       return res.status(400).json({ error: 'Resume must be 5MB or smaller' });
+    }
+
+    // A student must select a job role before uploading evidence for it. Fail
+    // open (allow) only if the check itself errors — e.g. job_applications
+    // hasn't been migrated yet — so an unrelated infra gap doesn't brick
+    // uploads; a real "you haven't applied" always blocks.
+    try {
+      if (!(await hasAnyApplication(req.user.id))) {
+        return res.status(400).json({ error: 'Select a job role before uploading a resume' });
+      }
+    } catch (checkErr) {
+      console.error('[resume] could not verify a job application before upload:', checkErr.message);
     }
 
     const storagePath = `${req.user.id}/resume.pdf`;

@@ -22,6 +22,7 @@ import {
   createUser,
   ROLES,
 } from '../models/User.js';
+import { hasAnyApplication } from '../models/JobApplication.js';
 
 const SESSION_COOKIE = 'devscore_session';
 
@@ -41,8 +42,21 @@ const GITHUB_TOKEN_TTL_DAYS = 365;
  * server-side session for the redirect round-trip, so the current user id is
  * carried in a short-lived signed `state` param instead (verified in the
  * callback, and doubling as CSRF protection).
+ *
+ * A student must select a job role before linking GitHub evidence for it —
+ * enforced here (not just hidden in the UI) so hitting this URL directly
+ * can't skip the step. Fails open only if the check itself errors (e.g.
+ * job_applications hasn't been migrated yet), not on a genuine "no role yet".
  */
-export function githubConnect(req, res) {
+export async function githubConnect(req, res) {
+  try {
+    if (!(await hasAnyApplication(req.user.id))) {
+      return res.redirect(`${env.clientUrl}/student/jobs?error=select_role_first`);
+    }
+  } catch (err) {
+    console.error('[github] could not verify a job application before connect:', err.message);
+  }
+
   const state = signGithubConnectState(req.user.id);
 
   const params = new URLSearchParams({

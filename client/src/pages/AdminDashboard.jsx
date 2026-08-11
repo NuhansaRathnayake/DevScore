@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout.jsx';
 import StatCard from '../components/StatCard.jsx';
+import { InlineLoader } from '../components/Spinner.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { adminApi } from '../lib/api.js';
 import { UsersIcon, BriefcaseIcon, ShieldIcon } from '../components/DashboardIcons.jsx';
@@ -141,7 +142,7 @@ export default function AdminDashboard() {
         </div>
 
         {loading ? (
-          <p className="muted table-card__empty">Loading…</p>
+          <InlineLoader className="table-card__empty" />
         ) : recruiters.length === 0 ? (
           <p className="muted table-card__empty">
             No recruiter accounts yet. Create the first one above.

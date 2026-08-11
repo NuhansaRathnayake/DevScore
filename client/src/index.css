@@ -438,16 +438,21 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   text-align: left;
-  padding: 12px 24px;
+  padding: 12px 18px;
   white-space: nowrap;
   border-bottom: 1px solid var(--ds-border-soft);
 }
 
 .data-table td {
-  padding: 15px 24px;
+  padding: 15px 18px;
   border-top: 1px solid var(--ds-border-soft);
   color: var(--ds-text);
   vertical-align: middle;
+}
+
+/* wide enough that inline skill chips flow in rows rather than one per line */
+.data-table .skill-chips--inline {
+  min-width: 176px;
 }
 
 /* th already draws a bottom hairline — avoid doubling it on the first row */
@@ -484,6 +489,7 @@ a {
   width: auto;
   padding: 8px 16px;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 /* ---- Buttons ---- */
@@ -659,6 +665,13 @@ a {
   border-color: var(--ds-missing-border);
 }
 
+/* status without judgement — a closed posting isn't a failure */
+.badge--neutral {
+  background: var(--ds-bg);
+  color: var(--ds-text-subtle);
+  border-color: var(--ds-border-strong);
+}
+
 /* ---- Student setup checklist (resume + GitHub) ---- */
 .setup-banner {
   display: flex;
@@ -750,6 +763,22 @@ a {
   color: var(--ds-verified);
 }
 
+/* Soft gate: the card still links through, it just reads as "do step 1 first" */
+.setup-card.is-locked {
+  border-style: dashed;
+}
+
+.setup-card.is-locked .setup-card__icon {
+  background: var(--ds-bg);
+  color: var(--ds-text-faint);
+}
+
+.setup-card__hint {
+  color: var(--ds-pending);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
 .setup-card h3 {
   font-family: var(--ds-font-display);
   font-size: 17px;
@@ -783,6 +812,172 @@ a {
   width: auto;
   align-self: flex-start;
   margin-top: auto;
+}
+
+/* ---- Job roles (student browser + recruiter postings) ---- */
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.job-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px;
+  transition: transform var(--ds-transition), box-shadow var(--ds-transition),
+    border-color var(--ds-transition);
+}
+
+.job-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--ds-shadow-hover);
+  border-color: #dddddd;
+}
+
+.job-card.is-applied {
+  border-color: var(--ds-verified-border);
+}
+
+.job-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.job-card__title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ds-heading);
+}
+
+.job-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.job-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-bg);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* clamped to three lines so cards in a row match height without a fixed one */
+.job-card__desc {
+  margin: 0 0 14px;
+  color: var(--ds-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.job-card__skills {
+  margin-bottom: 18px;
+}
+
+.job-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* .btn-primary is width:100% globally — job CTAs hug their label instead */
+.job-card__footer .btn-primary,
+.job-card__footer .btn-secondary,
+.btn-primary.job-card__cta {
+  width: auto;
+  padding: 9px 18px;
+  font-size: 14px;
+}
+
+/* ---- Per-role filter chips (recruiter dashboard) ---- */
+.job-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.job-filter__chip {
+  padding: 5px 13px;
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-surface);
+  color: var(--ds-text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--ds-transition),
+    background-color var(--ds-transition), color var(--ds-transition);
+}
+
+.job-filter__chip:hover {
+  border-color: var(--ds-primary-border);
+  color: var(--ds-primary-hover);
+}
+
+.job-filter__chip.is-active {
+  background: var(--ds-primary-soft);
+  border-color: var(--ds-primary);
+  color: var(--ds-primary-hover);
+}
+
+/* ---- Applied roles list (student dashboard + candidate profile) ---- */
+.applied-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.applied-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--ds-border-soft);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg);
+}
+
+.applied-list__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ds-heading);
+}
+
+.applied-list__meta {
+  font-size: 12.5px;
+  color: var(--ds-text-subtle);
+  margin-right: auto;
+}
+
+.btn-secondary.applied-list__cta {
+  width: auto;
 }
 
 /* ---- Candidate profile header ---- */
@@ -984,19 +1179,6 @@ a {
   margin: 0 0 28px;
 }
 
-.setup-card__meta {
-  color: var(--ds-text-subtle);
-  font-size: 13px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.setup-card .btn-primary,
-.setup-card .btn-secondary {
-  width: auto;
-  align-self: flex-start;
-  margin-top: 16px;
-}
-
 /* ---- Skill chips (extracted resume skills, FR 28-32) ---- */
 .skill-groups {
   display: flex;
@@ -1010,11 +1192,11 @@ a {
 
 .skill-group__label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--ds-text-muted);
+  color: var(--ds-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   margin-bottom: 8px;
 }
 
@@ -1032,11 +1214,12 @@ a {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--ds-radius-pill);
   background: var(--ds-primary-soft);
-  color: var(--ds-primary);
+  border: 1px solid var(--ds-primary-border);
+  color: var(--ds-primary-hover);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -1048,28 +1231,19 @@ a {
 .skill-chip--uncategorized {
   background: var(--ds-bg);
   color: var(--ds-text-muted);
-  border: 1px solid var(--ds-border);
+  border-color: var(--ds-border-strong);
 }
 
 .skill-chip--more {
   background: var(--ds-bg);
   color: var(--ds-text-subtle);
+  border-color: var(--ds-border-strong);
 }
 
-/* ---- Buttons ---- */
-.btn-primary,
-.btn-secondary {
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border: none;
-  border-radius: var(--ds-radius-sm);
+/* ---- Auth brand panel ---- */
+.auth-aside {
+  position: relative;
+  overflow: hidden;
   background: var(--ds-primary);
   color: #fff;
   display: flex;
@@ -1227,7 +1401,9 @@ a {
   color: var(--ds-text);
 }
 
-.auth-field input {
+.auth-field input,
+.auth-field textarea,
+.auth-field select {
   width: 100%;
   min-width: 0;
   font: inherit;
@@ -1241,18 +1417,47 @@ a {
   transition: border-color var(--ds-transition), box-shadow var(--ds-transition);
 }
 
-.auth-field input::placeholder {
+.auth-field input::placeholder,
+.auth-field textarea::placeholder {
   color: var(--ds-text-faint);
 }
 
-.auth-field input:hover {
+.auth-field input:hover,
+.auth-field textarea:hover,
+.auth-field select:hover {
   border-color: #d4d4d4;
 }
 
-.auth-field input:focus {
+.auth-field input:focus,
+.auth-field textarea:focus,
+.auth-field select:focus {
   outline: none;
   border-color: var(--ds-primary);
   box-shadow: var(--ds-focus-ring);
+}
+
+/* vertical resize only — sideways drag would burst out of the modal */
+.auth-field textarea {
+  min-height: 104px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+/* native select chrome varies per OS; draw our own chevron on a flat control */
+.auth-field select {
+  appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23737373' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+}
+
+.auth-field__hint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ds-text-faint);
 }
 
 .auth-form .btn-primary {
@@ -1301,6 +1506,48 @@ a {
 .auth-back:hover {
   color: var(--ds-primary);
   transform: translateX(-2px);
+}
+
+/* ---- Loading ---- */
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2.5px solid var(--ds-border-strong);
+  border-top-color: var(--ds-primary);
+  animation: ds-spin 0.7s linear infinite;
+}
+
+@keyframes ds-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 0;
+  color: var(--ds-text-muted);
+  font-size: 14px;
+}
+
+.page-loader__label {
+  font-weight: 500;
+}
+
+.inline-loader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .centered-status {

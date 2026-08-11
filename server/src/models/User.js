@@ -177,6 +177,20 @@ export async function listUsersByRole(role) {
   return data;
 }
 
+/**
+ * Fetch several users by id in one round-trip (recruiter applicant lists).
+ * Callers must guard against an empty `ids` — PostgREST rejects `in.()`.
+ */
+export async function listUsersByIds(ids) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .in('id', ids)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Count users of a given role without fetching rows (dashboard stats). */
 export async function countUsersByRole(role) {
   const { count, error } = await supabase

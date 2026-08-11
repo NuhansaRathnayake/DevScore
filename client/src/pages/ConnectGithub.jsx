@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout.jsx';
-import { githubApi } from '../lib/api.js';
+import { InlineLoader } from '../components/Spinner.jsx';
+import { githubApi, jobsApi } from '../lib/api.js';
 
 const ERROR_MESSAGES = {
   github_permission_denied: 'GitHub connection was cancelled — permission was not granted.',
@@ -10,6 +11,7 @@ const ERROR_MESSAGES = {
   github_token_exchange_failed: 'GitHub rejected the connection request. Please try again.',
   github_profile_fetch_failed: 'Could not read your GitHub profile. Please try again.',
   github_connection_failed: 'Something went wrong connecting your GitHub account.',
+  select_role_first: 'Select a job role before connecting GitHub.',
 };
 
 /**
@@ -19,6 +21,9 @@ const ERROR_MESSAGES = {
 export default function ConnectGithub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [status, setStatus] = useState(null);
+  // Optimistic until we know otherwise, so an unrelated fetch failure (e.g.
+  // job_applications not migrated yet) never flashes a false "locked" state.
+  const [roleApplied, setRoleApplied] = useState(true);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -27,15 +32,14 @@ export default function ConnectGithub() {
 
   useEffect(() => {
     (async () => {
-      try {
-        setStatus(await githubApi.status());
-      } finally {
-        setLoading(false);
-        if (callbackError || justConnected) {
-          searchParams.delete('error');
-          searchParams.delete('connected');
-          setSearchParams(searchParams, { replace: true });
-        }
+      const [s, a] = await Promise.allSettled([githubApi.status(), jobsApi.listApplied()]);
+      if (s.status === 'fulfilled') setStatus(s.value);
+      if (a.status === 'fulfilled') setRoleApplied(a.value.applications.length > 0);
+      setLoading(false);
+      if (callbackError || justConnected) {
+        searchParams.delete('error');
+        searchParams.delete('connected');
+        setSearchParams(searchParams, { replace: true });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     })();
@@ -72,7 +76,7 @@ export default function ConnectGithub() {
 
       <div className="card" style={{ maxWidth: 480 }}>
         {loading ? (
-          <p>Checking connection status…</p>
+          <InlineLoader label="Checking connection status…" />
         ) : status?.connected ? (
           <>
             <p>
@@ -92,6 +96,16 @@ export default function ConnectGithub() {
             >
               {disconnecting ? 'Disconnecting…' : 'Disconnect GitHub'}
             </button>
+          </>
+        ) : !roleApplied ? (
+          <>
+            <p className="muted">
+              Select a job role first — your GitHub evidence is reviewed against
+              the roles you&rsquo;ve applied for.
+            </p>
+            <Link to="/student/jobs" className="btn-primary">
+              Browse Job Roles
+            </Link>
           </>
         ) : (
           <>

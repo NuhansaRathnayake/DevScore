@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth, ROLE_HOME } from '../context/AuthContext.jsx';
+import { PageLoader } from './Spinner.jsx';
 
 /**
  * Client-side role-based access control (FR 6 / FR 16). Blocks unauthenticated
@@ -10,7 +11,11 @@ export default function ProtectedRoute({ allow, children }) {
   const { user, status } = useAuth();
 
   if (status === 'loading') {
-    return <div className="centered-status">Loading…</div>;
+    return (
+      <div className="centered-status">
+        <PageLoader />
+      </div>
+    );
   }
 
   if (status === 'guest' || !user) {

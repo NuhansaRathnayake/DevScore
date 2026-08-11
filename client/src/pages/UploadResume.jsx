@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout.jsx';
-import { resumeApi } from '../lib/api.js';
+import { InlineLoader } from '../components/Spinner.jsx';
+import { jobsApi, resumeApi } from '../lib/api.js';
 
 function formatSize(bytes) {
   if (!bytes) return '';
@@ -15,6 +16,9 @@ function formatSize(bytes) {
  */
 export default function UploadResume() {
   const [status, setStatus] = useState(null);
+  // Optimistic until we know otherwise, so an unrelated fetch failure (e.g.
+  // job_applications not migrated yet) never flashes a false "locked" state.
+  const [roleApplied, setRoleApplied] = useState(true);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -22,11 +26,10 @@ export default function UploadResume() {
 
   useEffect(() => {
     (async () => {
-      try {
-        setStatus(await resumeApi.status());
-      } finally {
-        setLoading(false);
-      }
+      const [s, a] = await Promise.allSettled([resumeApi.status(), jobsApi.listApplied()]);
+      if (s.status === 'fulfilled') setStatus(s.value);
+      if (a.status === 'fulfilled') setRoleApplied(a.value.applications.length > 0);
+      setLoading(false);
     })();
   }, []);
 
@@ -70,7 +73,7 @@ export default function UploadResume() {
 
       <div className="card" style={{ maxWidth: 480 }}>
         {loading ? (
-          <p>Checking resume status…</p>
+          <InlineLoader label="Checking resume status…" />
         ) : status?.uploaded ? (
           <>
             <p>
@@ -90,6 +93,16 @@ export default function UploadResume() {
             >
               {uploading ? 'Uploading…' : 'Replace resume'}
             </button>
+          </>
+        ) : !roleApplied ? (
+          <>
+            <p className="muted">
+              Select a job role first — your resume is reviewed against the
+              roles you&rsquo;ve applied for.
+            </p>
+            <Link to="/student/jobs" className="btn-primary">
+              Browse Job Roles
+            </Link>
           </>
         ) : (
           <>
