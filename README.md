@@ -1,55 +1,86 @@
 # DevScore
 
-**AI-Driven Job Readiness Scoring Using Semantic GitHub Analysis and Resume Verification for SE Roles**
-Team Script Fusion — Final Year Project.
+DevScore is an evidence-driven job-readiness scoring system for software engineering
+candidates. It compares claimed skills on a resume with verifiable evidence mined
+from a candidate's GitHub activity and other sources to produce a Job Readiness Score
+for recruiters.
 
-DevScore compares the skills a Software Engineering candidate *claims* on their resume
-against *verifiable* evidence mined from their GitHub activity, and presents recruiters
-with an evidence-based Job Readiness Score.
+Key capabilities
 
-## Architecture (per SDS Chapter 2 — three-tier)
+- Compare resume-claimed skills with GitHub-derived evidence
+- Role-based access (Student, Recruiter, Admin)
+- OAuth sign-in (Google/GitHub) and GitHub account linking for evidence mining
+- Resume upload + parsing microservice (CV parser)
 
-- **Client Tier** — `client/` — React.js (Vite) web application.
-- **Application Logic Tier** — `server/` — Node.js + Express REST API.
-- **Data Tier** — Supabase (Postgres), accessed via `@supabase/supabase-js`. Schema in `server/supabase/schema.sql`.
-- **AI/ML Microservice** — Python 3.9 (added in a later implementation phase).
+Repository layout
 
-## Implementation status
+- client/ — React (Vite) frontend
+- server/ — Node.js + Express backend and API
+- cv_parser/ — Python microservice for resume parsing and skill extraction
+- server/supabase/schema.sql — Supabase/Postgres schema
 
-This repository is at **Implementation 01 (Core System Development)**.
+Prerequisites
 
-### Implemented in this pass — Member 1 (GRCL Rathnayake) authentication foundation
-- OAuth sign-up / log-in entry point ("Sign in with Google").
-- Google OAuth redirect + callback flow, including existing-user detection and
-  new-account creation (FR 1–5).
-- Server-side secure session tokens (JWT), delivered only as an httpOnly
-  cookie, with an `OAuthSession` audit record supporting revocation (FR 7).
-- Role-based access control (Student / Recruiter / Admin) — enforced both
-  client-side (route guards) and server-side (`requireRole` middleware,
-  applied to the GitHub-connect routes below) (FR 6).
-- Role-appropriate dashboard shells with post-login redirect (FR 8).
-- Student "Connect GitHub Account" via GitHub OAuth: authorization flow,
-  token exchange, encrypted-token storage in `oauth_sessions`, linked
-  username on the user profile, disconnect, and a status endpoint (FR 9–10).
-- `User` and `OAuthSession` data models (Member 1 database ownership).
+- Node.js (16+ recommended)
+- npm (or yarn)
+- Python 3.9+ (for the CV parser)
+- A Supabase project (or Postgres instance) for data storage
 
-See `docs`/project SRS & SDS for the full requirement set. Other members' modules
-(resume upload & parsing, GitHub evidence mining, scoring engine, admin CRUD) are
-scaffolded only where an integration seam is required.
+Environment configuration
 
-## Getting started
+- Backend env example: `server/.env.example` — copy to `server/.env` and fill values.
+- Frontend env: `client/.env` (if you need to override `VITE_*` variables).
+
+Quick start
+
+1. Start Supabase (or point to your hosted project) and apply the SQL schema located at `server/supabase/schema.sql`.
+
+2. Backend (API)
 
 ```bash
-# Backend
 cd server
-cp .env.example .env      # fill in Supabase URL + service-role key + Google/GitHub OAuth
-# apply the schema to your Supabase project (SQL editor or `supabase db push`):
-#   server/supabase/schema.sql
+cp .env.example .env
+# edit .env and set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET, OAuth creds
 npm install
-npm run dev               # http://localhost:5000
+npm run dev
+# API defaults to http://localhost:5000
+```
 
-# Frontend
+3. Frontend (web app)
+
+```bash
 cd client
 npm install
-npm run dev               # http://localhost:5173
+npm run dev
+# Frontend defaults to http://localhost:5173
 ```
+
+4. CV parser (optional)
+
+```bash
+cd cv_parser
+python -m venv .venv
+source .venv/Scripts/activate    # Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt
+python app.py
+# Parser defaults to http://localhost:5001
+```
+
+Notes and tips
+
+- Keep `SUPABASE_SERVICE_ROLE_KEY` and other server secrets server-side only.
+- OAuth callback URLs are configured in `server/.env.example`.
+- The backend exposes routes under `/api/*` and serves JSON for the client app.
+
+Where to look next
+
+- Frontend entry: `client/src/main.jsx` and `client/src/pages`
+- Backend entry: `server/src/app.js` and `server/src/routes`
+- CV parser code: `cv_parser/`
+
+License & authors
+
+This project was developed by Team Script Fusion for an academic final-year project.
+See the repository contributors for details.
+
+If you'd like, I can also add a short Developer section with common troubleshooting steps, or expand the Getting Started section with Supabase CLI commands.
