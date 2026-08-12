@@ -1,14 +1,11 @@
-import {
-  ROLES,
-  toPublicUser,
-  listUsersByIds,
-  findById,
-} from "../models/User.js";
-import { JOB_STATUSES, listJobsByRecruiter } from "../models/Job.js";
+import { ROLES, toPublicUser, listUsersByIds, findById } from '../models/User.js';
+import { JOB_STATUSES, listJobsByRecruiter } from '../models/Job.js';
 import {
   listApplicationsByJobIds,
   listApplicationsForStudentInJobs,
-} from "../models/JobApplication.js";
+} from '../models/JobApplication.js';
+import * as GithubConnection from '../models/GithubConnection.js';
+import * as Resume from '../models/Resume.js';
 
 /** Assemble the evidence summary a recruiter is allowed to see for one candidate. */
 function buildCandidateSummary(user, connection, resume, skills) {
@@ -49,34 +46,49 @@ export async function listCandidates(req, res, next) {
   try {
     const jobs = await listJobsByRecruiter(req.user.id);
 
-    const jobFilter = (req.query?.jobId || "").trim();
+    const jobFilter = (req.query?.jobId || '').trim();
     let scoped = jobs;
     if (jobFilter) {
       scoped = jobs.filter((j) => j.id === jobFilter);
       if (scoped.length === 0) {
-        return res.status(404).json({ error: "Job not found" });
+        return res.status(404).json({ error: 'Job not found' });
       }
     }
 
     const jobIds = scoped.map((j) => j.id);
-    const applications = jobIds.length
-      ? await listApplicationsByJobIds(jobIds)
-      : [];
+    const applications = jobIds.length ? await listApplicationsByJobIds(jobIds) : [];
     const studentIds = [...new Set(applications.map((a) => a.student_id))];
     const rows = studentIds.length ? await listUsersByIds(studentIds) : [];
+
+    const [connections, resumes] = await Promise.all([
+      GithubConnection.findByUserIds(studentIds),
+      Resume.findByUserIds(studentIds),
+    ]);
+    const connectionByUser = Object.fromEntries(connections.map((c) => [c.user_id, c]));
+    const resumeByUser = Object.fromEntries(resumes.map((r) => [r.user_id, r]));
+    const skillsByResume = await Resume.getSkillsForResumes(resumes.map((r) => r.id));
 
     const studentById = new Map(rows.map((r) => [r.id, r]));
     const titleById = new Map(jobs.map((j) => [j.id, j.title]));
 
     const candidates = applications
       .filter((a) => studentById.has(a.student_id))
-      .map((a) => ({
-        ...toCandidateSummary(studentById.get(a.student_id)),
-        applicationId: a.id,
-        jobId: a.job_id,
-        jobTitle: titleById.get(a.job_id) || "",
-        appliedAt: a.applied_at,
-      }));
+      .map((a) => {
+        const student = studentById.get(a.student_id);
+        const resume = resumeByUser[student.id];
+        return {
+          ...buildCandidateSummary(
+            student,
+            connectionByUser[student.id],
+            resume,
+            resume ? skillsByResume[resume.id] : null,
+          ),
+          applicationId: a.id,
+          jobId: a.job_id,
+          jobTitle: titleById.get(a.job_id) || '',
+          appliedAt: a.applied_at,
+        };
+      });
 
     res.json({
       candidates,
@@ -89,7 +101,7 @@ export async function listCandidates(req, res, next) {
       stats: {
         total: rows.length,
         profileComplete: rows.filter(
-          (r) => r.resume_storage_path && r.github_username,
+          (r) => Boolean(resumeByUser[r.id]) && Boolean(connectionByUser[r.id]),
         ).length,
         applications: candidates.length,
         openJobs: jobs.filter((j) => j.status === JOB_STATUSES.OPEN).length,
@@ -111,25 +123,31 @@ export async function getCandidate(req, res, next) {
   try {
     const user = await findById(req.params.id);
     if (!user || user.role !== ROLES.STUDENT) {
-      return res.status(404).json({ error: "Candidate not found" });
+      return res.status(404).json({ error: 'Candidate not found' });
     }
 
     const jobs = await listJobsByRecruiter(req.user.id);
     const jobIds = jobs.map((j) => j.id);
     const applications = jobIds.length
-      ? await listApplicationsForStudentInJobs(row.id, jobIds)
+      ? await listApplicationsForStudentInJobs(user.id, jobIds)
       : [];
     if (applications.length === 0) {
-      return res.status(404).json({ error: "Candidate not found" });
+      return res.status(404).json({ error: 'Candidate not found' });
     }
+
+    const [connection, resume] = await Promise.all([
+      GithubConnection.findByUserId(user.id),
+      Resume.findByUserId(user.id),
+    ]);
+    const skills = resume ? await Resume.getSkills(resume.id) : null;
 
     const titleById = new Map(jobs.map((j) => [j.id, j.title]));
     res.json({
       candidate: {
-        ...toCandidateSummary(row),
+        ...buildCandidateSummary(user, connection, resume, skills),
         appliedRoles: applications.map((a) => ({
           jobId: a.job_id,
-          jobTitle: titleById.get(a.job_id) || "",
+          jobTitle: titleById.get(a.job_id) || '',
           appliedAt: a.applied_at,
         })),
       },

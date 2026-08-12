@@ -1,11 +1,11 @@
 -- DevScore — Data Tier schema (Supabase / Postgres)
--- Member 1 database ownership: users, oauth_sessions.
 -- Apply via the Supabase SQL editor or `supabase db push`.
 --
 -- Table layout (SDS logical design): users (identity/auth only),
 -- oauth_sessions (session audit trail), github_connections (1:1 per
 -- student), resumes (1:1 per student, current resume), skills (canonical
--- catalog), resume_skills (junction — one row per skill found in a resume).
+-- catalog), resume_skills (junction — one row per skill found in a resume),
+-- job_roles (recruiter postings), job_applications (student -> job_role).
 
 -- ---------------------------------------------------------------------------
 -- users  — identity and authentication ONLY. Resume/GitHub/skills data used
@@ -71,20 +71,82 @@ alter table public.oauth_sessions add constraint oauth_sessions_provider_check
   check (provider in ('google', 'github', 'local'));
 
 -- ---------------------------------------------------------------------------
+-- github_connections  — a student's linked GitHub account (FR 9/10). One row
+-- per user; the OAuth access token itself lives in oauth_sessions.
+-- ---------------------------------------------------------------------------
+create table if not exists public.github_connections (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null unique references public.users (id) on delete cascade,
+  username     text not null,
+  connected_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- resumes  — a student's current uploaded resume (FR 19-27). One row per
+-- user; re-uploading overwrites this row (and the file at storage_path in
+-- the 'resumes' Storage bucket), so it always describes the latest resume.
+-- ---------------------------------------------------------------------------
+create table if not exists public.resumes (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid not null unique references public.users (id) on delete cascade,
+  original_name     text not null,
+  storage_path      text not null,
+  size_bytes        integer not null,
+  uploaded_at       timestamptz not null default now(),
+  -- Skill-extraction status (FR 28-32) for THIS resume upload.
+  extraction_status text check (extraction_status in ('pending', 'success', 'success_no_skills_found', 'failed')),
+  extracted_at      timestamptz
+);
+
+-- ---------------------------------------------------------------------------
+-- skills  — canonical skill catalog, shared across all resumes. Seeded from
+-- cv_parser's dictionary scan; unrecognized terms found in an explicit
+-- "Skills" section are added here too (category = null) rather than
+-- dropped, so the catalog grows from real resumes over time.
+-- ---------------------------------------------------------------------------
+create table if not exists public.skills (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  category   text,
+  created_at timestamptz not null default now()
+);
+
+-- Case-insensitive uniqueness so "Python" and "python" from different
+-- resumes collapse into one catalog entry.
+create unique index if not exists skills_name_lower_idx on public.skills (lower(name));
+
+-- ---------------------------------------------------------------------------
+-- resume_skills  — junction: one row per skill found in a given resume
+-- (SDS "Skill" entity, scoped to a resume). from_dictionary_scan /
+-- from_skills_section mirror cv_parser's two detection passes — a skill can
+-- be found by either or both.
+-- ---------------------------------------------------------------------------
+create table if not exists public.resume_skills (
+  id                   uuid primary key default gen_random_uuid(),
+  resume_id            uuid not null references public.resumes (id) on delete cascade,
+  skill_id             uuid not null references public.skills (id) on delete cascade,
+  from_dictionary_scan boolean not null default false,
+  from_skills_section  boolean not null default false,
+  created_at           timestamptz not null default now(),
+  unique (resume_id, skill_id)
+);
+
+create index if not exists resume_skills_resume_id_idx on public.resume_skills (resume_id);
+create index if not exists resume_skills_skill_id_idx on public.resume_skills (skill_id);
+
+-- ---------------------------------------------------------------------------
 -- job_roles  (recruiter-authored postings a student applies to before we have
 -- anything to score them against)
 -- ---------------------------------------------------------------------------
--- Declared before job_applications, which references it.
 create table if not exists public.job_roles (
   id              uuid primary key default gen_random_uuid(),
   recruiter_id    uuid not null references public.users (id) on delete cascade,
   title           text not null,
   description     text not null default '',
   -- Skills the role asks for, as a flat jsonb array of names:
-  -- ["React", "PostgreSQL", ...]. jsonb rather than text[] so this column and
-  -- users.claimed_skills (also jsonb) stay one type end-to-end — the eventual
-  -- claimed-vs-required comparison then reads both through the same JSON
-  -- round-trip, with no PostgREST array-literal escaping to get wrong.
+  -- ["React", "PostgreSQL", ...]. Stored as the recruiter typed it, NOT
+  -- normalised against the skills catalog above — a future claimed-vs-
+  -- required comparison must case-fold both sides rather than match literally.
   required_skills jsonb not null default '[]'::jsonb,
   employment_type text not null default 'full-time'
                     check (employment_type in ('full-time', 'part-time', 'internship', 'contract')),
@@ -99,20 +161,13 @@ create table if not exists public.job_roles (
 create index if not exists job_roles_recruiter_id_idx on public.job_roles (recruiter_id);
 create index if not exists job_roles_status_idx on public.job_roles (status);
 
--- Idempotent upgrade path for the employment_type / status value sets.
-alter table public.job_roles drop constraint if exists job_roles_employment_type_check;
-alter table public.job_roles add constraint job_roles_employment_type_check
-  check (employment_type in ('full-time', 'part-time', 'internship', 'contract'));
-alter table public.job_roles drop constraint if exists job_roles_status_check;
-alter table public.job_roles add constraint job_roles_status_check
-  check (status in ('open', 'closed'));
-
 -- ---------------------------------------------------------------------------
 -- job_applications  (student -> job_role; a student may apply to many roles)
 -- ---------------------------------------------------------------------------
--- The resume and the GitHub link stay one-per-student on public.users and are
--- shared across every application, so an application row carries no artefacts
--- of its own — the (job_id, student_id) pair plus a timestamp is the whole fact.
+-- The resume and the GitHub link stay one-per-student (resumes/github_connections
+-- above) and are shared across every application, so an application row
+-- carries no artefacts of its own — the (job_id, student_id) pair plus a
+-- timestamp is the whole fact.
 create table if not exists public.job_applications (
   id         uuid primary key default gen_random_uuid(),
   job_id     uuid not null references public.job_roles (id) on delete cascade,
@@ -129,5 +184,9 @@ create index if not exists job_applications_student_id_idx on public.job_applica
 -- enabled with no public policies (deny-by-default for anon/authenticated).
 alter table public.users enable row level security;
 alter table public.oauth_sessions enable row level security;
+alter table public.github_connections enable row level security;
+alter table public.resumes enable row level security;
+alter table public.skills enable row level security;
+alter table public.resume_skills enable row level security;
 alter table public.job_roles enable row level security;
 alter table public.job_applications enable row level security;

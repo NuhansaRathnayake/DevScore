@@ -1,12 +1,16 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { env, isGoogleOAuthConfigured } from './env.js';
-import { findByProviderId, createUser, ROLES } from '../models/User.js';
+import { findByProviderId, findByEmail, createUser, ROLES } from '../models/User.js';
 
 /**
  * Resolve a Google profile to a DevScore user (FR 3–5):
- *  - detect an existing account by provider id (existing-user login), or
- *  - create a new account with the default Student role.
+ *  - detect an existing account by provider id (existing-user login),
+ *  - or an existing account with the same email under a different sign-in
+ *    method (local password, GitHub) — same person, same verified email,
+ *    so log into that account rather than crashing on the email's unique
+ *    constraint (mirrors the GitHub-login flow's existing-user check),
+ *  - or create a new account with the default Student role.
  */
 async function upsertGoogleUser(profile) {
   const email = profile.emails?.[0]?.value?.toLowerCase();
@@ -16,6 +20,9 @@ async function upsertGoogleUser(profile) {
 
   const existing = await findByProviderId('google', profile.id);
   if (existing) return existing;
+
+  const byEmail = await findByEmail(email);
+  if (byEmail) return byEmail;
 
   return createUser({
     email,

@@ -14,14 +14,8 @@ import {
   revokeAllForUserProvider,
   revokeSession,
 } from "../models/OAuthSession.js";
-import {
-  setGithubProfile,
-  clearGithubProfile,
-  findByProviderId,
-  findByEmail,
-  createUser,
-  ROLES,
-} from "../models/User.js";
+import { findByProviderId, findByEmail, createUser, ROLES } from "../models/User.js";
+import * as GithubConnection from "../models/GithubConnection.js";
 import { hasAnyApplication } from "../models/JobApplication.js";
 
 const SESSION_COOKIE = "devscore_session";
