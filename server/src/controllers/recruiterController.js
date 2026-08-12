@@ -1,28 +1,33 @@
-import { ROLES, toPublicUser, listUsersByIds, findById } from '../models/User.js';
-import { JOB_STATUSES, listJobsByRecruiter } from '../models/Job.js';
+import {
+  ROLES,
+  toPublicUser,
+  listUsersByIds,
+  findById,
+} from "../models/User.js";
+import { JOB_STATUSES, listJobsByRecruiter } from "../models/Job.js";
 import {
   listApplicationsByJobIds,
   listApplicationsForStudentInJobs,
-} from '../models/JobApplication.js';
+} from "../models/JobApplication.js";
 
-/** Shape a student row into the evidence summary a recruiter is allowed to see. */
-function toCandidateSummary(row) {
-  const u = toPublicUser(row);
+/** Assemble the evidence summary a recruiter is allowed to see for one candidate. */
+function buildCandidateSummary(user, connection, resume, skills) {
+  const u = toPublicUser(user);
   return {
     id: u.id,
     name: u.fullName || u.email,
     email: u.email,
     avatarUrl: u.avatarUrl,
-    resumeVerified: Boolean(u.resumeFilename),
-    resumeFilename: u.resumeFilename,
-    resumeUploadedAt: u.resumeUploadedAt,
-    githubVerified: Boolean(u.githubUsername),
-    githubUsername: u.githubUsername,
-    githubConnectedAt: u.githubConnectedAt,
+    resumeVerified: Boolean(resume),
+    resumeFilename: resume?.original_name || null,
+    resumeUploadedAt: resume?.uploaded_at || null,
+    githubVerified: Boolean(connection),
+    githubUsername: connection?.username || null,
+    githubConnectedAt: connection?.connected_at || null,
     joinedAt: u.createdAt,
-    skillsStatus: u.skillsExtractionStatus,
-    claimedSkills: u.claimedSkills,
-    skillsUncategorized: u.skillsUncategorized,
+    skillsStatus: resume?.extraction_status || null,
+    claimedSkills: skills?.byCategory || null,
+    skillsUncategorized: skills?.uncategorized || null,
   };
 }
 
@@ -44,17 +49,19 @@ export async function listCandidates(req, res, next) {
   try {
     const jobs = await listJobsByRecruiter(req.user.id);
 
-    const jobFilter = (req.query?.jobId || '').trim();
+    const jobFilter = (req.query?.jobId || "").trim();
     let scoped = jobs;
     if (jobFilter) {
       scoped = jobs.filter((j) => j.id === jobFilter);
       if (scoped.length === 0) {
-        return res.status(404).json({ error: 'Job not found' });
+        return res.status(404).json({ error: "Job not found" });
       }
     }
 
     const jobIds = scoped.map((j) => j.id);
-    const applications = jobIds.length ? await listApplicationsByJobIds(jobIds) : [];
+    const applications = jobIds.length
+      ? await listApplicationsByJobIds(jobIds)
+      : [];
     const studentIds = [...new Set(applications.map((a) => a.student_id))];
     const rows = studentIds.length ? await listUsersByIds(studentIds) : [];
 
@@ -67,7 +74,7 @@ export async function listCandidates(req, res, next) {
         ...toCandidateSummary(studentById.get(a.student_id)),
         applicationId: a.id,
         jobId: a.job_id,
-        jobTitle: titleById.get(a.job_id) || '',
+        jobTitle: titleById.get(a.job_id) || "",
         appliedAt: a.applied_at,
       }));
 
@@ -81,7 +88,9 @@ export async function listCandidates(req, res, next) {
       })),
       stats: {
         total: rows.length,
-        profileComplete: rows.filter((r) => r.resume_storage_path && r.github_username).length,
+        profileComplete: rows.filter(
+          (r) => r.resume_storage_path && r.github_username,
+        ).length,
         applications: candidates.length,
         openJobs: jobs.filter((j) => j.status === JOB_STATUSES.OPEN).length,
       },
@@ -100,9 +109,9 @@ export async function listCandidates(req, res, next) {
  */
 export async function getCandidate(req, res, next) {
   try {
-    const row = await findById(req.params.id);
-    if (!row || row.role !== ROLES.STUDENT) {
-      return res.status(404).json({ error: 'Candidate not found' });
+    const user = await findById(req.params.id);
+    if (!user || user.role !== ROLES.STUDENT) {
+      return res.status(404).json({ error: "Candidate not found" });
     }
 
     const jobs = await listJobsByRecruiter(req.user.id);
@@ -111,7 +120,7 @@ export async function getCandidate(req, res, next) {
       ? await listApplicationsForStudentInJobs(row.id, jobIds)
       : [];
     if (applications.length === 0) {
-      return res.status(404).json({ error: 'Candidate not found' });
+      return res.status(404).json({ error: "Candidate not found" });
     }
 
     const titleById = new Map(jobs.map((j) => [j.id, j.title]));
@@ -120,7 +129,7 @@ export async function getCandidate(req, res, next) {
         ...toCandidateSummary(row),
         appliedRoles: applications.map((a) => ({
           jobId: a.job_id,
-          jobTitle: titleById.get(a.job_id) || '',
+          jobTitle: titleById.get(a.job_id) || "",
           appliedAt: a.applied_at,
         })),
       },

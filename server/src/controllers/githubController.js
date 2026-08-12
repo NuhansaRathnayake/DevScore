@@ -1,4 +1,4 @@
-import { env } from '../config/env.js';
+import { env } from "../config/env.js";
 import {
   signGithubConnectState,
   signGithubLoginState,
@@ -6,14 +6,14 @@ import {
   signSessionToken,
   sessionExpiryDate,
   newTokenId,
-} from '../utils/jwt.js';
-import { encryptToken } from '../utils/secureToken.js';
+} from "../utils/jwt.js";
+import { encryptToken } from "../utils/secureToken.js";
 import {
   createSession,
   findActiveByUserAndProvider,
   revokeAllForUserProvider,
   revokeSession,
-} from '../models/OAuthSession.js';
+} from "../models/OAuthSession.js";
 import {
   setGithubProfile,
   clearGithubProfile,
@@ -21,14 +21,14 @@ import {
   findByEmail,
   createUser,
   ROLES,
-} from '../models/User.js';
-import { hasAnyApplication } from '../models/JobApplication.js';
+} from "../models/User.js";
+import { hasAnyApplication } from "../models/JobApplication.js";
 
-const SESSION_COOKIE = 'devscore_session';
+const SESSION_COOKIE = "devscore_session";
 
-const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
-const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
-const GITHUB_USER_API = 'https://api.github.com/user';
+const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
+const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
+const GITHUB_USER_API = "https://api.github.com/user";
 
 // GitHub OAuth app tokens don't expire on their own; we still record an
 // expiry so oauth_sessions' NOT NULL/audit semantics (SDS §4.7.5) hold, and
@@ -51,10 +51,15 @@ const GITHUB_TOKEN_TTL_DAYS = 365;
 export async function githubConnect(req, res) {
   try {
     if (!(await hasAnyApplication(req.user.id))) {
-      return res.redirect(`${env.clientUrl}/student/jobs?error=select_role_first`);
+      return res.redirect(
+        `${env.clientUrl}/student/jobs?error=select_role_first`,
+      );
     }
   } catch (err) {
-    console.error('[github] could not verify a job application before connect:', err.message);
+    console.error(
+      "[github] could not verify a job application before connect:",
+      err.message,
+    );
   }
 
   const state = signGithubConnectState(req.user.id);
@@ -63,9 +68,9 @@ export async function githubConnect(req, res) {
     client_id: env.github.clientId,
     redirect_uri: env.github.callbackUrl,
     // Read-only, public-data scopes only (SDS §4.7.4 — minimum viable permissions).
-    scope: 'read:user public_repo',
+    scope: "read:user public_repo",
     state,
-    allow_signup: 'false',
+    allow_signup: "false",
   });
 
   res.redirect(`${GITHUB_AUTHORIZE_URL}?${params.toString()}`);
@@ -82,9 +87,9 @@ export function githubLoginStart(req, res) {
   const params = new URLSearchParams({
     client_id: env.github.clientId,
     redirect_uri: env.github.callbackUrl,
-    scope: 'read:user user:email',
+    scope: "read:user user:email",
     state,
-    allow_signup: 'true',
+    allow_signup: "true",
   });
 
   res.redirect(`${GITHUB_AUTHORIZE_URL}?${params.toString()}`);
@@ -93,10 +98,10 @@ export function githubLoginStart(req, res) {
 /** Exchange an OAuth `code` for a GitHub access token + profile. Shared by connect and login. */
 async function exchangeGithubCode(code) {
   const tokenRes = await fetch(GITHUB_TOKEN_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
+      Accept: "application/json",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       client_id: env.github.clientId,
@@ -107,19 +112,19 @@ async function exchangeGithubCode(code) {
   });
   const tokenBody = await tokenRes.json();
   if (!tokenRes.ok || !tokenBody.access_token) {
-    throw new Error('github_token_exchange_failed');
+    throw new Error("github_token_exchange_failed");
   }
   const accessToken = tokenBody.access_token;
 
   const profileRes = await fetch(GITHUB_USER_API, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'DevScore-App',
+      Accept: "application/vnd.github+json",
+      "User-Agent": "DevScore-App",
     },
   });
   if (!profileRes.ok) {
-    throw new Error('github_profile_fetch_failed');
+    throw new Error("github_profile_fetch_failed");
   }
   const profile = await profileRes.json();
 
@@ -128,13 +133,14 @@ async function exchangeGithubCode(code) {
     const emailsRes = await fetch(`${GITHUB_USER_API}/emails`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'DevScore-App',
+        Accept: "application/vnd.github+json",
+        "User-Agent": "DevScore-App",
       },
     });
     if (emailsRes.ok) {
       const emails = await emailsRes.json();
-      profile.email = emails.find((e) => e.primary)?.email || emails[0]?.email || null;
+      profile.email =
+        emails.find((e) => e.primary)?.email || emails[0]?.email || null;
     }
   }
 
@@ -144,13 +150,15 @@ async function exchangeGithubCode(code) {
 /** Continue the "connect GitHub for evidence" flow (existing student, FR 9/10). */
 async function completeGithubConnect(req, res, userId, code) {
   const redirectBack = (query) =>
-    res.redirect(`${env.clientUrl}/student/github?${new URLSearchParams(query)}`);
+    res.redirect(
+      `${env.clientUrl}/student/github?${new URLSearchParams(query)}`,
+    );
 
   try {
     const { accessToken, profile } = await exchangeGithubCode(code);
 
     // One active GitHub connection per student — revoke any prior one before storing the new session.
-    await revokeAllForUserProvider(userId, 'github');
+    await revokeAllForUserProvider(userId, "github");
 
     const expiresAt = new Date(
       Date.now() + GITHUB_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
@@ -158,19 +166,19 @@ async function completeGithubConnect(req, res, userId, code) {
 
     await createSession({
       userId,
-      provider: 'github',
+      provider: "github",
       tokenId: newTokenId(),
       encryptedAccessToken: encryptToken(accessToken),
-      userAgent: req.headers['user-agent'] || '',
+      userAgent: req.headers["user-agent"] || "",
       ip: req.ip,
       expiresAt,
     });
 
-    await setGithubProfile(userId, profile.login);
+    await GithubConnection.upsert(userId, profile.login);
 
-    return redirectBack({ connected: '1' });
+    return redirectBack({ connected: "1" });
   } catch {
-    return redirectBack({ error: 'github_connection_failed' });
+    return redirectBack({ error: "github_connection_failed" });
   }
 }
 
@@ -183,23 +191,27 @@ async function completeGithubLogin(req, res, code) {
     const { profile } = await exchangeGithubCode(code);
     const oauthId = String(profile.id);
 
-    let user = await findByProviderId('github', oauthId);
+    let user = await findByProviderId("github", oauthId);
     if (!user) {
       // A prior Google/local account with the same email gets linked by
       // email rather than duplicated (mirrors Google's existing-user check, FR 4/6).
       user = profile.email ? await findByEmail(profile.email) : null;
       if (!user) {
         if (!profile.email) {
-          return redirectBack({ error: 'github_email_required' });
+          return redirectBack({ error: "github_email_required" });
         }
-        const [firstName, ...rest] = (profile.name || profile.login || '').split(' ');
+        const [firstName, ...rest] = (
+          profile.name ||
+          profile.login ||
+          ""
+        ).split(" ");
         user = await createUser({
           email: profile.email,
-          firstName: firstName || profile.login || 'GitHub',
-          lastName: rest.join(' '),
-          avatarUrl: profile.avatar_url || '',
+          firstName: firstName || profile.login || "GitHub",
+          lastName: rest.join(" "),
+          avatarUrl: profile.avatar_url || "",
           role: ROLES.STUDENT,
-          oauthProvider: 'github',
+          oauthProvider: "github",
           oauthId,
         });
       }
@@ -209,24 +221,28 @@ async function completeGithubLogin(req, res, code) {
     const expiresAt = sessionExpiryDate();
     await createSession({
       userId: user.id,
-      provider: 'github',
+      provider: "github",
       tokenId,
-      userAgent: req.headers['user-agent'] || '',
+      userAgent: req.headers["user-agent"] || "",
       ip: req.ip,
       expiresAt,
     });
-    const token = signSessionToken({ userId: user.id, role: user.role, tokenId });
+    const token = signSessionToken({
+      userId: user.id,
+      role: user.role,
+      tokenId,
+    });
 
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: env.nodeEnv === 'production',
-      sameSite: 'lax',
+      secure: env.nodeEnv === "production",
+      sameSite: "lax",
       expires: expiresAt,
     });
 
     return res.redirect(`${env.clientUrl}/auth/callback`);
   } catch {
-    return redirectBack({ error: 'github_login_failed' });
+    return redirectBack({ error: "github_login_failed" });
   }
 }
 
@@ -239,7 +255,9 @@ export async function githubCallback(req, res) {
   const { code, state, error: githubError } = req.query;
 
   if (githubError) {
-    return res.redirect(`${env.clientUrl}/login?error=github_permission_denied`);
+    return res.redirect(
+      `${env.clientUrl}/login?error=github_permission_denied`,
+    );
   }
   if (!code || !state) {
     return res.redirect(`${env.clientUrl}/login?error=github_invalid_callback`);
@@ -252,28 +270,39 @@ export async function githubCallback(req, res) {
     return res.redirect(`${env.clientUrl}/login?error=github_invalid_state`);
   }
 
-  if (payload.purpose === 'github_connect') {
+  if (payload.purpose === "github_connect") {
     return completeGithubConnect(req, res, payload.sub, code);
   }
   return completeGithubLogin(req, res, code);
 }
 
 /** Report whether the current student has an active GitHub connection. */
-export async function githubStatus(req, res) {
-  const session = await findActiveByUserAndProvider(req.user.id, 'github');
-  res.json({
-    connected: Boolean(session),
-    username: req.user.github_username || null,
-    connectedAt: req.user.github_connected_at || null,
-  });
+export async function githubStatus(req, res, next) {
+  try {
+    const [session, connection] = await Promise.all([
+      findActiveByUserAndProvider(req.user.id, "github"),
+      GithubConnection.findByUserId(req.user.id),
+    ]);
+    res.json({
+      connected: Boolean(session),
+      username: connection?.username || null,
+      connectedAt: connection?.connected_at || null,
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** Disconnect the student's linked GitHub account. */
-export async function githubDisconnect(req, res) {
-  const session = await findActiveByUserAndProvider(req.user.id, 'github');
-  if (session) {
-    await revokeSession(session.token_id);
+export async function githubDisconnect(req, res, next) {
+  try {
+    const session = await findActiveByUserAndProvider(req.user.id, "github");
+    if (session) {
+      await revokeSession(session.token_id);
+    }
+    await GithubConnection.remove(req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
   }
-  await clearGithubProfile(req.user.id);
-  res.json({ ok: true });
 }

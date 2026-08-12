@@ -1,9 +1,15 @@
 -- DevScore — Data Tier schema (Supabase / Postgres)
 -- Member 1 database ownership: users, oauth_sessions.
 -- Apply via the Supabase SQL editor or `supabase db push`.
+--
+-- Table layout (SDS logical design): users (identity/auth only),
+-- oauth_sessions (session audit trail), github_connections (1:1 per
+-- student), resumes (1:1 per student, current resume), skills (canonical
+-- catalog), resume_skills (junction — one row per skill found in a resume).
 
 -- ---------------------------------------------------------------------------
--- users  (SDS logical design: User + name fields)
+-- users  — identity and authentication ONLY. Resume/GitHub/skills data used
+-- to live here as bolted-on columns; they now live in their own tables below.
 -- ---------------------------------------------------------------------------
 create table if not exists public.users (
   id             uuid primary key default gen_random_uuid(),
@@ -19,25 +25,6 @@ create table if not exists public.users (
   oauth_id       text,
   -- Set only for local (email/password) accounts — bcrypt hash, never plaintext.
   password_hash  text,
-  -- Student's linked GitHub identity (FR 9/10) — set once the GitHub OAuth
-  -- connect flow succeeds; the access token itself lives in oauth_sessions.
-  github_username     text,
-  github_connected_at timestamptz,
-  -- Student's uploaded resume (FR 19-27). The file itself lives in the
-  -- 'resumes' Storage bucket at resume_storage_path; re-uploading overwrites
-  -- the same path, so these columns always describe the current resume.
-  resume_original_name text,
-  resume_storage_path  text,
-  resume_size_bytes    integer,
-  resume_uploaded_at   timestamptz,
-  -- Skills extracted from the resume by the CV parser (FR 28-32). Re-parsed
-  -- on every upload; claimed_skills mirrors parse_resume()'s "by_category"
-  -- shape: { "language": ["Python", ...], "framework": [...], ... }.
-  claimed_skills          jsonb,
-  skills_uncategorized    jsonb,
-  skills_extraction_status text
-    check (skills_extraction_status in ('pending', 'success', 'success_no_skills_found', 'failed')),
-  skills_extracted_at     timestamptz,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
   -- One account per provider identity (supports existing-user detection, FR 6).
@@ -57,21 +44,6 @@ alter table public.users drop constraint if exists users_has_credential;
 alter table public.users add constraint users_has_credential check (
   (oauth_provider is not null and oauth_id is not null) or password_hash is not null
 );
-
--- Idempotent upgrade path for databases created before resume upload existed.
-alter table public.users add column if not exists resume_original_name text;
-alter table public.users add column if not exists resume_storage_path text;
-alter table public.users add column if not exists resume_size_bytes integer;
-alter table public.users add column if not exists resume_uploaded_at timestamptz;
-
--- Idempotent upgrade path for databases created before skill extraction existed.
-alter table public.users add column if not exists claimed_skills jsonb;
-alter table public.users add column if not exists skills_uncategorized jsonb;
-alter table public.users add column if not exists skills_extraction_status text;
-alter table public.users add column if not exists skills_extracted_at timestamptz;
-alter table public.users drop constraint if exists users_skills_extraction_status_check;
-alter table public.users add constraint users_skills_extraction_status_check
-  check (skills_extraction_status in ('pending', 'success', 'success_no_skills_found', 'failed'));
 
 -- ---------------------------------------------------------------------------
 -- oauth_sessions  (FR 7 — server-side session tokens; SDS §4.7.5 audit trail)

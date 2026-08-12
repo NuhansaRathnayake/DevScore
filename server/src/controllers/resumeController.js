@@ -1,5 +1,5 @@
 import { supabase } from '../config/db.js';
-import { setResumeInfo, setSkillsExtraction } from '../models/User.js';
+import * as Resume from '../models/Resume.js';
 import { parseResumeBuffer } from '../utils/cvParser.js';
 import { hasAnyApplication } from '../models/JobApplication.js';
 
@@ -7,19 +7,35 @@ const BUCKET = 'resumes';
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB (FR 20 — size validation)
 
 /** Report the current student's resume + skill-extraction status (FR 28-32). */
-export async function resumeStatus(req, res) {
-  res.json({
-    uploaded: Boolean(req.user.resume_storage_path),
-    filename: req.user.resume_original_name || null,
-    sizeBytes: req.user.resume_size_bytes || null,
-    uploadedAt: req.user.resume_uploaded_at || null,
-    skills: {
-      status: req.user.skills_extraction_status || null,
-      byCategory: req.user.claimed_skills || null,
-      uncategorized: req.user.skills_uncategorized || null,
-      extractedAt: req.user.skills_extracted_at || null,
-    },
-  });
+export async function resumeStatus(req, res, next) {
+  try {
+    const resume = await Resume.findByUserId(req.user.id);
+    if (!resume) {
+      return res.json({
+        uploaded: false,
+        filename: null,
+        sizeBytes: null,
+        uploadedAt: null,
+        skills: { status: null, byCategory: null, uncategorized: null, extractedAt: null },
+      });
+    }
+
+    const skills = await Resume.getSkills(resume.id);
+    res.json({
+      uploaded: true,
+      filename: resume.original_name,
+      sizeBytes: resume.size_bytes,
+      uploadedAt: resume.uploaded_at,
+      skills: {
+        status: resume.extraction_status,
+        byCategory: skills.byCategory,
+        uncategorized: skills.uncategorized,
+        extractedAt: resume.extracted_at,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -63,7 +79,7 @@ export async function uploadResume(req, res, next) {
       return res.status(502).json({ error: 'Could not store the resume. Please try again.' });
     }
 
-    let user = await setResumeInfo(req.user.id, {
+    let resume = await Resume.upsert(req.user.id, {
       originalName: file.originalname,
       storagePath,
       sizeBytes: file.size,
@@ -78,25 +94,26 @@ export async function uploadResume(req, res, next) {
       const parsed = await parseResumeBuffer(file.buffer, file.originalname);
       // parse_resume()'s status values ('success' | 'success_no_skills_found'
       // | 'failed') already match the DB check constraint 1:1.
-      user = await setSkillsExtraction(req.user.id, {
+      resume = await Resume.setExtraction(resume.id, {
         status: parsed.status,
         byCategory: parsed.skills || null,
         uncategorized: parsed.uncategorized_terms_found || null,
       });
     } catch {
-      user = await setSkillsExtraction(req.user.id, { status: 'failed' });
+      resume = await Resume.setExtraction(resume.id, { status: 'failed' });
     }
 
+    const skills = await Resume.getSkills(resume.id);
     res.status(201).json({
       uploaded: true,
-      filename: user.resume_original_name,
-      sizeBytes: user.resume_size_bytes,
-      uploadedAt: user.resume_uploaded_at,
+      filename: resume.original_name,
+      sizeBytes: resume.size_bytes,
+      uploadedAt: resume.uploaded_at,
       skills: {
-        status: user.skills_extraction_status || null,
-        byCategory: user.claimed_skills || null,
-        uncategorized: user.skills_uncategorized || null,
-        extractedAt: user.skills_extracted_at || null,
+        status: resume.extraction_status,
+        byCategory: skills.byCategory,
+        uncategorized: skills.uncategorized,
+        extractedAt: resume.extracted_at,
       },
     });
   } catch (err) {

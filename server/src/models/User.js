@@ -1,8 +1,9 @@
 import { supabase } from '../config/db.js';
 
 /**
- * User data-access module — Member 1 database ownership (Users; OAuth sessions).
- * Backed by the Supabase `users` table (see server/supabase/schema.sql).
+ * User data-access module — identity and authentication ONLY. Resume,
+ * GitHub connection, and skills data live in their own tables/models
+ * (Resume.js, GithubConnection.js, Skill.js) — see server/supabase/schema.sql.
  */
 
 /** Roles enforced across the system (SRS §1.1.1 primary actors). */
@@ -23,15 +24,6 @@ export function toPublicUser(row) {
     avatarUrl: row.avatar_url,
     role: row.role,
     createdAt: row.created_at,
-    githubUsername: row.github_username || null,
-    githubConnectedAt: row.github_connected_at || null,
-    resumeFilename: row.resume_original_name || null,
-    resumeSizeBytes: row.resume_size_bytes || null,
-    resumeUploadedAt: row.resume_uploaded_at || null,
-    claimedSkills: row.claimed_skills || null,
-    skillsUncategorized: row.skills_uncategorized || null,
-    skillsExtractionStatus: row.skills_extraction_status || null,
-    skillsExtractedAt: row.skills_extracted_at || null,
   };
 }
 
@@ -65,91 +57,6 @@ export async function findById(id) {
     .select('*')
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** Record a student's linked GitHub identity (FR 9/10). */
-export async function setGithubProfile(userId, githubUsername) {
-  const { data, error } = await supabase
-    .from('users')
-    .update({
-      github_username: githubUsername,
-      github_connected_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** Clear a student's linked GitHub identity (disconnect). */
-export async function clearGithubProfile(userId) {
-  const { data, error } = await supabase
-    .from('users')
-    .update({ github_username: null, github_connected_at: null })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** Record a student's uploaded resume (FR 19-27). Re-uploading overwrites these fields. */
-export async function setResumeInfo(userId, { originalName, storagePath, sizeBytes }) {
-  const { data, error } = await supabase
-    .from('users')
-    .update({
-      resume_original_name: originalName,
-      resume_storage_path: storagePath,
-      resume_size_bytes: sizeBytes,
-      resume_uploaded_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** Clear a student's resume record (used if the storage upload fails after a prior success, or on delete). */
-export async function clearResumeInfo(userId) {
-  const { data, error } = await supabase
-    .from('users')
-    .update({
-      resume_original_name: null,
-      resume_storage_path: null,
-      resume_size_bytes: null,
-      resume_uploaded_at: null,
-    })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/**
- * Record the outcome of skill extraction for a student's resume (FR 28-32).
- * Called once immediately after upload (status 'pending'), then again once
- * the parser responds (or fails) with the final status and results.
- */
-export async function setSkillsExtraction(
-  userId,
-  { status, byCategory = null, uncategorized = null },
-) {
-  const { data, error } = await supabase
-    .from('users')
-    .update({
-      skills_extraction_status: status,
-      claimed_skills: byCategory,
-      skills_uncategorized: uncategorized,
-      skills_extracted_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-    .select()
-    .single();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -201,7 +108,7 @@ export async function countUsersByRole(role) {
   return count || 0;
 }
 
-/** Delete a user account outright (admin CRUD, FR 47-50). Cascades to oauth_sessions. */
+/** Delete a user account outright (admin CRUD, FR 47-50). Cascades to oauth_sessions, github_connections, resumes. */
 export async function deleteUser(id) {
   const { error } = await supabase.from('users').delete().eq('id', id);
   if (error) throw new Error(error.message);
